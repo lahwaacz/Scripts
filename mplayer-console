@@ -1,0 +1,22 @@
+#!/bin/bash
+
+monitor_width=1440
+monitor_height=900
+monitor_aspect=`echo $monitor_width $monitor_height | awk '{print $1 / $2}'`
+
+width=`mplayer -vo null -vc null -ao null -frames 0 -identify "$1" 2>/dev/null | grep ID_VIDEO_WIDTH | awk '{print substr($1,16)}'`
+height=`mplayer -vo null -vc null -ao null -frames 0 -identify "$1" 2>/dev/null | grep ID_VIDEO_HEIGHT | awk '{print substr($1,17)}'`
+
+aspect=`echo $width $height | awk '{print $1 / $2}'`
+
+if [[ $monitor_aspect > $aspect ]]; then
+    monitor_width=`echo $monitor_height $aspect | awk '{print $1 * $2}'`
+fi
+
+setterm -cursor off -blank 0 -powersave off
+#tmux set -g status off
+
+mplayer -vo fbdev2 -quiet -zoom -fs -monitoraspect $monitor_aspect -xy $monitor_width -screenw $monitor_width -screenh $monitor_height -vf expand=:::::$monitor_aspect "$@"
+
+setterm -cursor on -blank 1 -powersave powerdown
+#tmux set -g status on
