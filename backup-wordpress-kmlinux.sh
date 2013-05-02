@@ -15,7 +15,7 @@ else
     QUIET=""
 fi
 
-ssh $* klinkjak@kmlinux.fjfi.cvut.cz 'bash -s' < ~/bin/backup-wordpress-kmlinux-server-side.sh $QUIET
+ssh $* klinkjak@kmlinux.fjfi.cvut.cz 'bash -s' < ~/Scripts/backup-wordpress-kmlinux-server-side.sh $QUIET
 scp $* klinkjak@kmlinux.fjfi.cvut.cz:~/backups/*.tar.gz /home/lahwaacz/stuff/Archiv/backup-wordpress-kmlinux/
 ssh $* klinkjak@kmlinux.fjfi.cvut.cz 'rm -f ~/backups/*.tar.gz' $QUIET
 
