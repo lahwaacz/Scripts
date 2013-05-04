@@ -4,8 +4,6 @@
 # Modified TMUX start script from:
 #     http://forums.gentoo.org/viewtopic-t-836006-start-0.html
 #
-# Store it to `~/bin/tmx` and issue `chmod +x`.
-#
 
 # Works because bash automatically trims by assigning to variables and by 
 # passing arguments
@@ -19,10 +17,14 @@ fi
 base_session="$1"
 # This actually works without the trim() on all systems except OSX
 tmux_nb=$(trim `tmux ls | grep "^$base_session" | wc -l`)
+
+# path to startup script (session name passed as argument)
+startup_script="$HOME/Scripts/tmux-startup.sh"
+
 if [[ "$tmux_nb" == "0" ]]; then
-    if [[ -f "$HOME/.tmux-startup.sh" ]]; then
-        echo "Launching startup file '$HOME/.tmux-startup.sh $base_session'"
-        $HOME/.tmux-startup.sh $base_session
+    if [[ -x "$startup_script" ]]; then
+        echo "Launching startup file '$startup_script $base_session'"
+        "$startup_script" $base_session
     else
         echo "Launching tmux base session $base_session"
         tmux new-session -s $base_session
