@@ -24,7 +24,7 @@ djvu2jpg() {
     do
         num=$(printf "%03d" "$i")
         pnm="pg_$num.pnm"
-        out=$(basename pnm .pnm).jpg
+        out=$(basename $pnm .pnm).png
         echo "  $out"
         ddjvu -page=$i -format=pnm "$1" "$pnm"
         any2img "$pnm" "$out"

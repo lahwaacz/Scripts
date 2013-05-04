@@ -1,5 +1,8 @@
 #! /usr/bin/env python
 
+# simple RPC interface to aria2c
+# based on: https://github.com/baskerville/diana
+
 # TODO: --save-session doesn't save items added by addUri method
 
 from pythonscripts import *

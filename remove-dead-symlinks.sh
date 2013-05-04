@@ -1,6 +1,9 @@
 #! /bin/bash
 
-for itm in *
+# recursively remove dead symlinks
+
+# non-recursive version: 'for itm in *'
+for itm in **/*
 do
     if [ -h "$itm" ]
     then

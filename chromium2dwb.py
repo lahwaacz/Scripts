@@ -1,5 +1,7 @@
 #! /usr/bin/env python
 
+# converts Chromium bookmarks (usually in '~/.config/chromium/<profile>/Bookmarks') to format suitable for dwb
+
 import json
 import sys
 
