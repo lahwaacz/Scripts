@@ -1,0 +1,40 @@
+#!/bin/bash
+# Check currency of ABS packages
+# Snippet lifted from absent: http://aur.archlinux.org/packages.php?ID=50669
+# add /usr/bin/abs to sudoers if you don't want the password prompt
+
+mag=$'\e[1;35m'
+yel=$'\e[1;33m'
+cyn=$'\e[1;36m'
+red=$'\e[1;31m'
+end=$'\e[0m'
+searchdirs=("/var/abs/core" "/var/abs/extra" "/var/abs/community")
+
+for name in "$@"; do
+    for repo in "${searchdirs[@]}"; do
+        if [[ ( -d ${repo}/${name} && -f ${repo}/${name}/PKGBUILD ) ]]; then
+        target="${repo}/${name}" 
+        repos="${repo##*/}"
+        avers="$(awk -F= '/^pkg(v|r)/ {s=s (s?"-":"") $2} END {printf "%s", s}' <${target}/PKGBUILD)" 
+        pvers="$(awk '/Version/ {print $3}' <(pacman -Si ${name}))" 
+        ivers="$(awk '/Version/ {print $3}' <(pacman -Qi ${name} 2>/dev/null))"
+
+            # synchronize repo 
+            if [[ "$avers" < "$pvers" ]]; then
+                sudo abs "${target##*s/}"
+            fi
+
+            # print the current version details
+            printf "%s\n%s\n" "${yel}${repos^} version${end}" "$pvers"
+            printf "%s\n%s\n" "${mag}ABS version${end}" "$avers"
+
+            # locally installed?
+            if [[ -n "$ivers" ]]; then
+                printf "\n%s\n%s\n" "${cyn}Installed${end}" "$ivers"
+            else 
+                printf "\n%s\n" "${red}${name} not installed…${end}"
+            fi
+        fi
+    done
+done
+

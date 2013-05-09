@@ -127,6 +127,12 @@ class Sync(object):
             dest = item[1]
 
             print("Copying %s\n    to %s" % (src, dest))
+            try:
+                os.makedirs(os.path.dirname(dest))
+                shutil.copystat(os.path.dirname(src), os.path.dirname(dest))
+            except OSError as e:
+                if e.errno != 17:
+                    raise
             shutil.copy2(src, dest)
 
 
