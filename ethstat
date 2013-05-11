@@ -1,0 +1,37 @@
+#!/bin/bash
+
+exec gawk '
+function humanize_size(size,     count, sizestr) {
+  count = 1
+
+  while (size + 0 > 1024) {
+    size /= 1024
+    count++
+  }
+
+  sizestr = sprintf("%.2f", size)
+  sub(/\.?0+$/, "", sizestr)
+  return sprintf("%s %s", sizestr, suffix[count])
+}
+
+BEGIN {
+  # preload array for humanize_size
+  split("B KiB MiB GiB TiB PiB EiB ZiB YiB", suffix)
+
+  # build array of devices and stats
+  for(i = 1; i < ARGC; i++) {
+    rc = split(ARGV[i], fn, /\//)
+    getline devices[fn[5]][fn[7]] < ARGV[i]
+  }
+
+  # dump
+  printf "%8s%12s%12s%8s\n", "Device", "Sent", "Received", "Ratio"
+  for (dev in devices) {
+    tx_human = humanize_size(devices[dev]["tx_bytes"])
+    rx_human = humanize_size(devices[dev]["rx_bytes"])
+    ratio = devices[dev]["rx_bytes"] ? devices[dev]["tx_bytes"] / devices[dev]["rx_bytes"] : 0
+
+    printf "%8s%12s%12s%8.2f\n", dev, tx_human, rx_human, ratio
+  }
+}
+' /sys/class/net/*/statistics/[tr]x_bytes
