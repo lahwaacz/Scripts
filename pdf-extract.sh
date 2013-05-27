@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# exit on error
+set -e
+
 any2img() {
     convert -density 150 "$1" -quality 100 "$2" &>/dev/null
 }
@@ -7,39 +10,46 @@ any2img() {
 pdf2img() {
     echo "Splitting single pdf file by pages and converting to png"
     stapler burst "$1"
-    rm -f "$1"
-    for i in *.pdf
+    base=${1%.*}
+    for i in "${base}_"*.pdf
     do
-        out=$(basename "$i" .pdf).png
+        out=pg${i#"$base"}  # will result in 'pg_123.pdf'
+        out=${out%.*}.tiff  # replace extension
         echo "$out"
-        any2img "$i" "$out"
+#        any2img "$i" "$out"
+        convert -density 300 "$i" -compress lzw "$out"
         rm -f "$i"
     done
 }
 
 djvu2img() {
-    echo "Splitting single djvu file by pages and converting to jpg"
+    echo "Splitting single djvu file by pages (tiff)"
     pages=`djvused -e "n" "$1"`
     for (( i=1; i<=$pages; i++ ))
     do
         num=$(printf "%03d" "$i")
-        pnm="pg_$num.pnm"
-        out=$(basename $pnm .pnm).png
+        out="pg_$num.tiff"
         echo "  $out"
-        ddjvu -page=$i -format=pnm "$1" "$pnm"
-        any2img "$pnm" "$out"
-        rm -f "$pnm"
+        ddjvu -page=$i -format=tiff "$1" "$out"
     done
 }
 
-if [[ $1 == *.pdf ]]; then
-    dir=$(basename "$1" .pdf)
-    mkdir "$dir"
-    cp "$1" "$dir"
-    cd "$dir"
-    pdf2img "$1"
-elif [[ $1 == *.djvu ]]; then
-    djvu2img "$1"
+path=$(realpath "$1")
+filename=$(basename "$path")
+extension=${filename##*.}
+basename=${filename%.*} # filename without extension
+
+# create directory for extracted images
+mkdir -p "$basename"
+cp "$path" "$basename"
+cd "$basename"
+
+if [[ "$extension" == "pdf" ]]; then
+    pdf2img "$filename"
+    rm -f "$filename"
+elif [[ "$extension" == "djvu" ]]; then
+    djvu2img "$filename"
+    rm -f "$filename"
 else
     echo "Supported file types: pdf, djvu"
     exit 1
