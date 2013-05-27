@@ -13,11 +13,11 @@ searchdirs=("/var/abs/core" "/var/abs/extra" "/var/abs/community")
 for name in "$@"; do
     for repo in "${searchdirs[@]}"; do
         if [[ ( -d ${repo}/${name} && -f ${repo}/${name}/PKGBUILD ) ]]; then
-        target="${repo}/${name}" 
-        repos="${repo##*/}"
-        avers="$(awk -F= '/^pkg(v|r)/ {s=s (s?"-":"") $2} END {printf "%s", s}' <${target}/PKGBUILD)" 
-        pvers="$(awk '/Version/ {print $3}' <(pacman -Si ${name}))" 
-        ivers="$(awk '/Version/ {print $3}' <(pacman -Qi ${name} 2>/dev/null))"
+            target="${repo}/${name}" 
+            repos="${repo##*/}"
+            avers="$(awk -F= '/^pkg(v|r)/ {s=s (s?"-":"") $2} END {printf "%s", s}' <${target}/PKGBUILD)" 
+            pvers="$(awk '/Version/ {print $3}' <(pacman -Si ${name}))" 
+            ivers="$(awk '/Version/ {print $3}' <(pacman -Qi ${name} 2>/dev/null))"
 
             # synchronize repo 
             if [[ "$avers" < "$pvers" ]]; then
@@ -32,7 +32,7 @@ for name in "$@"; do
             if [[ -n "$ivers" ]]; then
                 printf "\n%s\n%s\n" "${cyn}Installed${end}" "$ivers"
             else 
-                printf "\n%s\n" "${red}${name} not installed…${end}"
+                printf "\n%s\n" "${red}${name} not installed...${end}"
             fi
         fi
     done
