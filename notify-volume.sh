@@ -2,24 +2,27 @@
 
 # volume control (up/down/mute/unmute/toggle) + notification
 
-id=91
-duration=5
+# duration in ms
+duration=1500
 
 notify () {
-    title="Volume set to"
+    # get volume level
     percent=$(ponymix get-volume)
-    content="$percent%"
 
-    ponymix is-muted
-    if [[ $? -eq 0 ]]; then
-        title="Volume muted"
-        content=""
-    fi
+    # check if muted, set title
+    ponymix is-muted && title="Volume muted" || title="Volume"
 
-    twmnc --id "$id" --title "$title" --content "$content" --duration "$duration"
+    # create fancy bar
+    f=$((percent/10))
+    e=$((10-f))
+    fchars='◼◼◼◼◼◼◼◼◼◼'
+    echars='◻◻◻◻◻◻◻◻◻◻'
+    bar="${fchars:0:f}${echars:0:e} $percent%"
+
+    notify-send --app-name=VolumeNotification --expire-time="$duration" --urgency=low "$title" "$bar"
 }
 
-# redirect all output to /dev/null
+# redirect stdout of this script to /dev/null
 exec > /dev/null
 
 case "$1" in
