@@ -8,7 +8,7 @@ any2img() {
 }
 
 pdf2img() {
-    echo "Splitting single pdf file by pages and converting to png"
+    echo "Splitting single pdf file by pages (tiff)"
     stapler burst "$1"
     base=${1%.*}
     for i in "${base}_"*.pdf

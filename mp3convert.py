@@ -14,7 +14,7 @@ import scandir
 from pythonscripts.tempfiles import TempFiles
 from pythonscripts.subprocess_extensions import getstatusoutput
 from pythonscripts.ffparser import FFprobeParser
-    
+
 
 audio_types = ("mp3", "aac", "ac3", "mp2", "wma", "wav", "mka", "m4a", "ogg", "oga", "flac")
 audio_file_regex = re.compile("^(?P<dirname>/(.*/)*)(?P<filename>.*(?P<extension>\.(" + "|".join(audio_types) + ")))$")
@@ -24,10 +24,12 @@ ffmpeg_command = "/usr/bin/ffmpeg -i %(input)s -acodec libmp3lame -ar 44100 -ab 
 class GettingBitrateError(Exception):
     def __init__(self, fname):
         self.message = "Couldn't get bitrate from file " + fname
-    
+
+
 class ConversionError(Exception):
     def __init__(self, fname, status, output):
         self.message = "Error while converting file " + fname + "\nffmpeg exited with status " + str(status) + "\n" + output
+
 
 def get_bitrate(filename):
     parser = FFprobeParser(filename)
@@ -37,6 +39,7 @@ def get_bitrate(filename):
         raise GettingBitrateError(filename)
     else:
         return bitrate // 1000
+
 
 def convert(filename, output_extension, bitrate, delete_after=False):
     tmpfile = tmp.getTempFileName()
@@ -50,7 +53,7 @@ def convert(filename, output_extension, bitrate, delete_after=False):
             os.remove(filename)
         shutil.move(tmpfile, os.path.splitext(filename)[0] + output_extension)
         tmp.remove(tmpfile)
-            
+
 
 # thread-safe iterating over generators
 class LockedIterator(object):
@@ -76,7 +79,7 @@ class Main():
         self.countDifferentFormat = 0
         self.countErrors = 0
         self.countNonAudioFiles = 0
-        
+
         self.dry_run = args.dry_run
         self.bitrate = args.bitrate
         self.verbose = args.verbose
@@ -84,7 +87,7 @@ class Main():
         self.deleteAfter = args.delete_after
         self.outputExtension = "." + args.output_extension
         self.paths = args.path
-        
+
         try:
             self.threads = cpu_count()
         except NotImplementedError:
@@ -94,7 +97,7 @@ class Main():
         self.killed = threading.Event()
         self.threadsFinished = 0
         self.queue = LockedIterator(self.queue_generator())
-        
+
     def print_stats(self):
         print()
         print("-----------collected statistics-----------")
@@ -105,7 +108,7 @@ class Main():
         print("Errors:                             % 6d" % self.countErrors)
         print("Non-audio files:                    % 6d" % self.countNonAudioFiles)
         print("------------------------------------------")
-            
+
     def check(self, path):
         match = re.match(audio_file_regex, path)
 
@@ -115,7 +118,7 @@ class Main():
 
         filename = match.group("filename")
         ext = match.group("extension")
-        
+
         self.countAudioFiles += 1
         if ext != self.outputExtension:
             self.countDifferentFormat += 1
@@ -128,7 +131,7 @@ class Main():
             self.countHigherBitrate += 1
             return True
         return False
-        
+
     def run(self):
         for i in range(self.threads):
             t = threading.Thread(target=self.worker, args=(i + 1,))
@@ -141,7 +144,7 @@ class Main():
             self.killed.set()
 
         self.print_stats()
-            
+
     def worker(self, id):
         try:
             while not self.killed.is_set():
@@ -214,7 +217,7 @@ if __name__ == "__main__":
     parser.add_argument("--output-extension", choices=audio_types, type=str, default="mp3", help="set output extension")
 
     args = parser.parse_args()
-    
+
     tmp = TempFiles()
     main = Main(args)
     main.run()

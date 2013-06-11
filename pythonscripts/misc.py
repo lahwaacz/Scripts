@@ -78,3 +78,17 @@ def smart_truncate(text, max_length=100, suffix='...'):
     else:
         return text
 
+
+
+"""
+Recursive directory creation function (like 'mkdir -p' in linux).
+"""
+
+import os
+
+def mkdir(path):
+    try:
+        os.makedirs(path)
+    except OSError as e:
+        if e.errno != 17:
+            raise e
