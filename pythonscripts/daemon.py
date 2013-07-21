@@ -2,12 +2,15 @@
 
 import os
 
-def spawnDaemon(path_to_executable, *args):
+def spawnDaemon(*args, detach_fds=True):
     """Spawn a completely detached subprocess (i.e., a daemon).
 
     E.g. for mark:
     spawnDaemon("../bin/producenotify.py", "producenotify.py", "xx")
     """
+    if len(args) == 0:
+        raise ValueError("no arguments supplied")
+
     # fork the first time (to make a non-session-leader child process)
     try:
         pid = os.fork()
@@ -28,27 +31,28 @@ def spawnDaemon(path_to_executable, *args):
         # child process is all done
         os._exit(0)
 
-    # grandchild process now non-session-leader, detached from parent
-    # grandchild process must now close all open files
-    try:
-        maxfd = os.sysconf("SC_OPEN_MAX")
-    except (AttributeError, ValueError):
-        maxfd = 1024
-
-    for fd in range(maxfd):
+    if detach_fds:
+        # grandchild process now non-session-leader, detached from parent
+        # grandchild process must now close all open files
         try:
-            os.close(fd)
-        except OSError: # ERROR, fd wasn't open to begin with (ignored)
-            pass
+            maxfd = os.sysconf("SC_OPEN_MAX")
+        except (AttributeError, ValueError):
+            maxfd = 1024
 
-    # redirect stdin, stdout and stderr to /dev/null
-    os.open(REDIRECT_TO, os.O_RDWR) # standard input (0)
-    os.dup2(0, 1)
-    os.dup2(0, 2)
+        for fd in range(maxfd):
+            try:
+                os.close(fd)
+            except OSError: # ERROR, fd wasn't open to begin with (ignored)
+                pass
+
+        # redirect stdin, stdout and stderr to /dev/null
+        os.open(REDIRECT_TO, os.O_RDWR) # standard input (0)
+        os.dup2(0, 1)
+        os.dup2(0, 2)
 
     # and finally let's execute the executable for the daemon!
     try:
-        os.execv(path_to_executable, args)
+        os.execvp(args[0], args)
     except Exception as e:
         # oops, we're cut off from the world, let's just give up
         os._exit(255)

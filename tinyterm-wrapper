@@ -1,0 +1,119 @@
+#! /usr/bin/env python
+
+""" Wrapper spawning TinyTerm processes under systemd service.
+    tinyterm-wrapper must be run in daemon mode as systemd service for this to work!!
+
+    TODO: client does not know if spawning was succesful; for this, it may be necessary to rewrite 
+          tinyterm-wrapper into C and use TinyTerm code directly
+    TODO: rewrite into C using systemd's daemon style and socket passing
+"""
+
+import sys
+import argparse
+import traceback
+from multiprocessing.connection import Client, Listener
+
+from pythonscripts.daemon import spawnDaemon
+
+
+address = ("localhost", 4242)
+key = bytes("tinyterm-wrapper", encoding="ascii")
+
+
+class SpawnError(Exception):
+    """ Raised when command was not spawned succesfully.
+    """
+    pass
+
+
+class Command(object):
+    action = None
+    args = None
+
+
+class Reply(object):
+    status = None
+    output = None
+
+
+class WrapperClient(object):
+    def __init__(self):
+        self.connection = Client(address, authkey=key)
+
+    def __del__(self):
+        self.connection.close()
+
+    def spawn(self, args):
+        cmd = Command()
+        cmd.action = "spawn"
+        cmd.args = args
+
+        self.connection.send(cmd)
+        try:
+            rep = self.connection.recv()
+            if rep.status != 0:
+                raise SpawnError
+        except EOFError:
+            print("client: did not receive reply")
+        except SpawnError:
+            print(rep.status)
+            print(rep.output)
+
+
+class WrapperDaemon(object):
+    def __init__(self):
+        self.listener = Listener(address, authkey=key)
+
+    def __del__(self):
+        self.listener.close()
+
+    def run(self):
+        run = True
+        while run:
+            try:
+                connection = self.listener.accept()
+                msg = connection.recv()
+                rep = Reply()
+                if msg.action == "spawn":
+                    rep.status, rep.output = self.spawn(msg.args)
+                elif msg.action == "exit":
+                    run = False
+                else:
+                    rep.status = 1
+                    rep.output = "unknown action"
+                connection.send(rep)
+            except:  # ignore all exceptions
+                traceback.print_exc()
+                print("Exception ignored")
+
+    def spawn(self, args):
+        print("spawning command '%s'" % " ".join(args))
+        spawnDaemon(*args, detach_fds=False)
+        return 0, ""
+
+
+def test_daemon_running():
+    try:
+        conn = Client(address, authkey=key)
+        conn.close()
+    except ConnectionRefusedError:
+        print("daemon is not running")
+        sys.exit(1)
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+            usage="%(prog)s --daemon\n%(prog)s arg_1 [arg_2 ...]",
+            description="first version starts the daemon, second version spawns TinyTerm process with options (arg_1, arg_2, ...)")
+    parser.add_argument("-d", "--daemon", action="store_true", help="Start the daemon")
+    args, tinyterm_args = parser.parse_known_args()
+
+    if args.daemon:
+        daemon = WrapperDaemon()
+        daemon.run()
+    else:
+        test_daemon_running()
+
+        client = WrapperClient()
+        tinyterm_args.insert(0, "tinyterm")
+        client.spawn(tinyterm_args)
+
