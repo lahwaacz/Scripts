@@ -16,12 +16,14 @@ shittyfiles = [
     '~/.gconfd',
     '~/.gconf',
     '~/.local/share/gegl-0.2',
-    '~/.FRD/log/app.log',
-    '~/.FRD/links.txt',
-    '~/.objectdb',
+    '~/.FRD/log/app.log',   # FRD
+    '~/.FRD/links.txt',     # FRD
+    '~/.objectdb',          # FRD
     '~/.gstreamer-0.10',
     '~/.pulse',
     '~/.esd_auth',
+    '~/.config/enchant',
+    '~/.spicec',            # contains only log file; unconfigurable
 ]
 
 

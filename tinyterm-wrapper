@@ -5,7 +5,8 @@
 
     TODO: client does not know if spawning was succesful; for this, it may be necessary to rewrite 
           tinyterm-wrapper into C and use TinyTerm code directly
-    TODO: rewrite into C using systemd's daemon style and socket passing
+    TODO: rewrite into C using systemd's daemon style and socket activation (or dbus activation,
+          depending on what's simpler)
 """
 
 import sys

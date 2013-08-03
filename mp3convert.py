@@ -102,7 +102,7 @@ class Main():
         print()
         print("-----------collected statistics-----------")
         print("All audio files (without errors):   % 6d" % self.countAudioFiles)
-        print("All files to convert:               % 6d" % (self.countDifferentFormat + self.countHigherBitrate))
+        print("Converted files:                    % 6d" % (self.countDifferentFormat + self.countHigherBitrate))
         print("    - different format:             % 6d" % self.countDifferentFormat)
         print("    - %3s but higher bitrate:       % 6d" % (self.outputExtension[1:], self.countHigherBitrate))
         print("Errors:                             % 6d" % self.countErrors)

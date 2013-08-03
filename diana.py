@@ -134,15 +134,15 @@ def show_queue(kind="all"):
         if len(line_items["name"]) > namewidth:
             line_items["name"] = line_items["name"][:namewidth - 3] + "..."
         line_items["percent"] = "%.1f %%" % percent
-        line_items["completed_length"] = sizeof_fmt(completed_length, "short")
-        line_items["total_length"] = sizeof_fmt(total_length, "short")
-        line_items["down_speed"] = sizeof_fmt(download_speed, "short") + "/s"
-        line_items["up_speed"] = sizeof_fmt(float(d["uploadSpeed"]), "short") + "/s"
+        line_items["completed_length"] = format_sizeof(completed_length, "short")
+        line_items["total_length"] = format_sizeof(total_length, "short")
+        line_items["down_speed"] = format_sizeof(download_speed, "short") + "/s"
+        line_items["up_speed"] = format_sizeof(float(d["uploadSpeed"]), "short") + "/s"
         if "numSeeders" in d:
             line_items["seeders"] = d["numSeeders"]
         line_items["connections"] = d["connections"]
         if download_speed > 0:
-            line_items["eta"] = formatTime(remaining_length // download_speed)
+            line_items["eta"] = format_time(remaining_length // download_speed)
 
         color = getColor(line_items["status"], download_speed)
         print(colorize(color, line_format.format_map(line_items).strip()))
@@ -186,7 +186,7 @@ def show_stats(args):
         value = stats[key]
         print("%24s: " % colorize("black", key), end="")
         if "Speed" in key:
-            print("%s/s" % sizeof_fmt(float(value), "short"))
+            print("%s/s" % format_sizeof(float(value), "short"))
         else:
             print(value)
 
