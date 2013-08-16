@@ -5,15 +5,15 @@
 
 # TODO: --save-session doesn't save items added by addUri method
 
-from pythonscripts import *
-
+import os
+import sys
 import urllib.request, json, base64
 from urllib.error import URLError, HTTPError
-import sys, os
-from getopt import getopt
 from collections import defaultdict
 import subprocess
 import argparse
+
+from pythonscripts import *
 
 PORT = 6868
 EXIT_CODES = {
@@ -66,7 +66,7 @@ def _call_func(func, params=[]):
 def call_func(func, params=[]):
     code, response = _call_func(func, params)
     if response is None:
-        print("server replied: %s" % code, file=sys.stderr)
+        sys.stderr.write("server replied: %s\n" % code)
     else:
         return response
     sys.exit(1)
@@ -184,7 +184,7 @@ def show_stats(args):
     stats = call_func("getGlobalStat")["result"]
     for key in sorted(stats.keys()):
         value = stats[key]
-        print("%24s: " % colorize("black", key), end="")
+        sys.stdout.write("%24s: " % colorize("black", key))
         if "Speed" in key:
             print("%s/s" % format_sizeof(float(value), "short"))
         else:
@@ -267,7 +267,7 @@ def show_files(args):
 def change_global_option(args):
     call_func("changeGlobalOption", [{args.option: args.value}])
 
-if __name__ == "__main__":
+def main():
     parser = argparse.ArgumentParser(description="Simple script controlling aria2 in daemon mode.")
     subparsers = parser.add_subparsers()
     parser_start = subparsers.add_parser("start", help="Start the daemon.")
@@ -327,10 +327,13 @@ if __name__ == "__main__":
 
     daemon_running = is_daemon_running()
     if not daemon_running and args.func != daemon_start:
-        print("daemon is not running", file=sys.stderr)
+        sys.stderr.write("daemon is not running\n")
         sys.exit(1)
     if daemon_running and args.func == daemon_start:
-        print("daemon is already running", file=sys.stderr)
+        sys.stderr.write("daemon is already running\n")
         sys.exit(1)
 
     args.func(args)
+
+if __name__ == "__main__":
+    main()

@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Original author: xyne
-# url: http://xyne.archlinux.ca/projects/quickserve/
+# Original author: Xyne
+# http://xyne.archlinux.ca/projects/quickserve/
 
 set -e
 
