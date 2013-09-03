@@ -1,0 +1,59 @@
+#! /usr/bin/bash
+
+# Script for safe copying to FAT32 filesystems.
+# All bad characters are replaced by '_' (underscore) when copying.
+# File conflicts (e.g. 'foo?' and 'foo:' are both mapped to 'foo_') are not checked - using 'cp -i' is recommended.
+
+# Some resources:
+# http://askubuntu.com/questions/11634/how-can-i-substitute-colons-when-i-rsync-on-a-usb-key
+#
+# Simple (stupid) alternative:
+# find -type f -name '*.pat' -print0  | tar -c -f - --null --files-from - | tar -C /path/to/dst -v -x -f - --show-transformed --transform 's/?/_/g'
+#
+
+# two arguments are accepted
+if [[ $# -ne 2 ]]; then
+    echo "Usage: $0 <src path> <dst path>"
+    exit 1
+fi
+
+base=$(realpath "$1")
+basedir=$(dirname "$base")
+dst=$(realpath "$2")
+
+# $dst must be existing dir
+if [[ ! -d "$dst" ]]; then
+    echo "Target directory '$dst' does not exist."
+    exit 1
+fi
+
+# 'cp' alias
+CP="cp -i --preserve=all"
+# characters that will be replaced with '_'
+BADCHARS='<>|;:!?"*\+'
+
+# enhance globbing
+shopt -s dotglob globstar
+
+# function creating target file/dir name
+mk_target() {
+    local target=${1#"$basedir"}
+    echo "$dst/${target//[$BADCHARS]/_}"
+}
+
+# dirs and files are handled differently
+if [[ -d "$base" ]]; then
+    for src in "$base"/**/*; do
+        target=$(mk_target "$src")
+        if [[ -d "$src" ]]; then
+            mkdir -p -- "$target"
+        elif [[ "$src" != "$target" ]]; then
+            $CP -- "$src" "$target"
+        fi
+    done
+elif [[ -f "$base" ]]; then
+    target=$(mk_target "$base")
+    if [[ "$src" != "$target" ]]; then
+        $CP -- "$base" "$target"
+    fi
+fi
