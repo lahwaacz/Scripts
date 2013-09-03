@@ -2,34 +2,28 @@
 
 import json
 import re
+import subprocess
 from pprint import pprint
 
-from subprocess_extensions import getoutput
 
 ffprobe = "ffprobe -v quiet -print_format json -show_format -show_streams "
 
 
 class FFprobeParser:
     def __init__(self, path):
-        self.data = json.loads(getoutput(ffprobe + re.escape(path)))
+        self.data = json.loads(subprocess.check_output(ffprobe + re.escape(path), shell=True, universal_newlines=True))
 
         self.format = self.data["format"]
         self.audio = None
         self.video = None
-        for i in range(len(self.data["streams"])):
-            if self.audio is None and self.data["streams"][i]["codec_type"] == "audio":
-                self.audio = self.data["streams"][i]
-            if self.video is None and self.data["streams"][i]["codec_type"] == "video":
-                self.video = self.data["streams"][i]
+        for stream in self.data["streams"]:
+            if self.audio is None and stream["codec_type"] == "audio":
+                self.audio = stream
+            if self.video is None and stream["codec_type"] == "video":
+                self.video = stream
 
     def _get(self, option, attribute):
-        if option == "audio":
-            src = self.audio
-        elif option == "video":
-            src = self.video
-        elif option == "format":
-            src = self.format
-        return src[attribute]
+        return getattr(self, option)[attribute]
 
     def _getBitrate(self, option):
         if option == "audio":
@@ -49,6 +43,9 @@ class FFprobeParser:
                 return None
 
     def get(self, option, attribute):
+        """ 'option' is one of "audio", "video", "format"
+            'attribute' is the json attribute to query
+        """
         if attribute == "bit_rate":
             return self._getBitrate(option)
         else:
@@ -58,12 +55,8 @@ class FFprobeParser:
                 return None
 
     def pprint(self, option):
-        if option == "audio":
-            pprint(self.audio)
-        elif option == "video":
-            pprint(self.video)
-        elif option == "format":
-            pprint(self.format)
-        else:
-            pprint(self.data)
+        """ 'option' is one of "audio", "video", "format",
+            otherwise 'self.data' is printed
+        """
+        pprint(getattr(self, option, self.data))
 
