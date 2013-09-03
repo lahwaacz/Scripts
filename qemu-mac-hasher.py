@@ -6,11 +6,8 @@
 import sys
 import zlib
 
-if len(sys.argv) == 0:
-    print("No string specified.")
-    sys.exit(1)
-elif len(sys.argv) > 2:
-    print("Multiple strings specified, specify only one.")
+if len(sys.argv) != 2:
+    print("usage: %s <VM Name>" % sys.argv[0])
     sys.exit(1)
 
 crc = zlib.crc32(sys.argv[1].encode("utf-8")) & 0xffffffff

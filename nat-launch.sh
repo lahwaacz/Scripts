@@ -30,6 +30,6 @@ dhcpd_conf=/etc/dhcpd.conf
 dhcpd_lease=/run/dhcpd.lease
 dhcpd_pid=/run/dhcpd.pid
 
-source nat_launch_subnet.sh
+source nat-launch-subnet.sh
 
 launch_subnet "$action"
