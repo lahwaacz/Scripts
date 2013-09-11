@@ -26,9 +26,10 @@ mask=/24
 subnet_ip=192.168.1.0$mask
 server_ip=192.168.1.23$mask
 iptables=/usr/bin/idemptables
-dhcpd_conf=/etc/dhcpd.conf
-dhcpd_lease=/run/dhcpd.lease
-dhcpd_pid=/run/dhcpd.pid
+dnsmasq_pid=/run/dnsmasq.pid
+dnsmasq_lease=/run/dnsmasq.lease
+dnsmasq_port=0
+dnsmasq_dhcp_range="192.168.1.100,192.168.1.150,6h"
 
 source nat-launch-subnet.sh
 

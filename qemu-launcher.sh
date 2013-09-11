@@ -11,7 +11,7 @@ function print_usage() {
 function get_tap_name() {
     for (( i=0; i<$tap_limit; i++ )); do
         local name="tap$i"
-        if ! is_interface "$name"; then
+        if [[ ! -d "/sys/class/net/$name" ]]; then
             echo "$name"
             break
         fi
