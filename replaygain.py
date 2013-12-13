@@ -11,6 +11,7 @@ from time import sleep
 import mutagen
 from mutagen.id3 import ID3, TXXX 
 
+# depends on python2-scandir-git <https://aur.archlinux.org/packages/python2-scandir-git>
 import scandir
 
 from pythonscripts.logger import Logger

@@ -9,6 +9,7 @@ from time import sleep
 import re
 import shutil
 
+# depends on python-scandir-git <https://aur.archlinux.org/packages/python-scandir-git>
 import scandir
 
 from pythonscripts.tempfiles import TempFiles
