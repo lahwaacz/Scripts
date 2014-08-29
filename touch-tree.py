@@ -1,8 +1,8 @@
 #! /usr/bin/env python
 
 # Little script to "touch" directory structure.
-# Instead of copying each file, but instead of copying full file, the new file is "touched",
-# so only tree structure is preserved and only empty files created.
+# Works like 'cp -r', but instead of copying full file, the new file is "touched",
+# so the tree structure is preserved and only empty files created.
 
 import sys
 import os

@@ -7,9 +7,11 @@ tmux new-session -d -s "$1"
 tmux move-window -s "$1":1 -t "$1":10
  
 # 1 - todo list
-tmux new-window -t "$1":1 -n todo   'zsh -is eval "vim ~/Dropbox/Notes/todo"'
+#tmux new-window -t "$1":1 -n todo   'zsh -is eval "vim ~/Dropbox/Notes/todo"'
+tmux new-window -t "$1":1
 # 2 - git
-tmux new-window -t "$1":2 -n git    'zsh -is eval "cd ~/GitHub-repos/archlinux-dotfiles"'
+#tmux new-window -t "$1":2 -n git    'zsh -is eval "cd ~/GitHub-repos/archlinux-dotfiles"'
+tmux new-window -t "$1":2
 # 3 - empty shell
 tmux new-window -t "$1":3
 

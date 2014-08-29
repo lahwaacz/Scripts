@@ -2,11 +2,11 @@
 #
 # abook export script to sync abook & mutt/alias by armin wolfermann
 
-addressbook=$HOME/Dropbox/addressbook.abook
+addressbook=~/Bbox/addressbook.abook
 abook --datafile $addressbook ${@}
 abook --convert \
 	--informat abook --infile $addressbook \
-	--outformat mutt --outfile $HOME/.mutt/alias.new
-mv $HOME/.mutt/alias $HOME/.mutt/alias.bak
-mv $HOME/.mutt/alias.new $HOME/.mutt/alias
+	--outformat mutt --outfile ~/.config/mutt/alias.new
+mv ~/.config/mutt/alias ~/.config/mutt/alias.bak
+mv ~/.config/mutt/alias.new ~/.config/mutt/alias
 

@@ -151,10 +151,10 @@ def show_queue(kind="all"):
 
 
 def daemon_start(args):
-    cmd = "aria2c -D --quiet --enable-rpc --rpc-listen-port="+str(PORT)+" --rpc-save-upload-metadata=true --save-session=~/.aria2/diana-session"
-    if os.path.exists("~/.aria2/diana-session"):
-        cmd += " --input-file=~/.aria2/diana-session"
-    cmd += " -j 2 -l ~/.aria2/diana-log"
+    cmd = "aria2c -D --quiet --enable-rpc --rpc-listen-port="+str(PORT)+" --rpc-save-upload-metadata=true --save-session=~/.config/aria2/diana-session"
+    if os.path.exists("~/.config/aria2/diana-session"):
+        cmd += " --input-file=~/.config/aria2/diana-session"
+    cmd += " -j 2 -l ~/.config/aria2/diana-log"
     subprocess.call(cmd, shell=True)
 
 def daemon_kill(args):

@@ -10,12 +10,8 @@ paths=(
     ~/.*.conf
     "$HOME/.config"
     "$HOME/.gnupg"
-    "$HOME/.imapfilter"
-    "$HOME/.mutt"
     "$HOME/.sage"
     "$HOME/.ssh"
-    "$HOME/.vim"
-    "$HOME/Virtual.Machines/aqemu"
 )
 
 for path in "${paths[@]}"; do

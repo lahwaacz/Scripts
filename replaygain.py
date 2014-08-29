@@ -271,9 +271,9 @@ class Main:
             dirs = []
             files = []
             for entry in scandir.scandir(root):
-                if entry.isdir():
+                if entry.is_dir():
                     dirs.append(entry.name)
-                elif entry.isfile() and entry.name.endswith(".mp3"):
+                elif entry.is_file() and entry.name.endswith(".mp3"):
                     files.append(entry.name)
 
             # first yield found files, then recurse into subdirs

@@ -46,9 +46,9 @@ function extract() {
             ;;
         rar)
             mkdir "$basename"
-            pushd -q "$basename"
+            pushd "$basename"
                 unrar e "$fname"
-            popd -q
+            popd
             ;;
         7z)
             7za x "$fname" -o"$basename"

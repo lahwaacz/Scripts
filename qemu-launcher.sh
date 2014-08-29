@@ -33,6 +33,7 @@ else
 fi
 
 
+sudo_args=("-Ap" "Enter your root password (QEMU launcher script)")
 username=$(whoami)
 tap_limit=10            # maximum number of TAP interfaces created by this script
 tap_nic=$(get_tap_name)
@@ -41,39 +42,49 @@ wan_nic="wlan0"         # WAN interface name (for NAT)
 
 
 case "$vm_name" in
-    virtarch)
-        echo "Running qemu-tap-helper.sh"
-        sudo qemu-tap-helper.sh "$username" "$tap_nic" "$br_nic" "$wan_nic" up
+    btrfs)
+        sudo "${sudo_args[@]}" qemu-tap-helper.sh "$username" "$tap_nic" "$br_nic" "$wan_nic" up
 
         qemu-system-x86_64 \
             -name "$vm_name" \
             -monitor stdio \
             -enable-kvm -smp 2 -cpu host -m 1024 \
             -vga qxl -spice port=5931,disable-ticketing \
-            -drive file="/home/lahwaacz/Virtual.Machines/archlinux.raw",if=virtio,cache=none -boot once=c \
+            -drive file="/home/lahwaacz/virtual_machines/archlinux-btrfs.raw",if=virtio,cache=none -boot once=c \
             -net nic,model=virtio,macaddr=$(qemu-mac-hasher.py "$vm_name") -net tap,ifname="$tap_nic",script=no,downscript=no \
             -usbdevice tablet
 
-        echo "Running qemu-tap-helper.sh"
-        sudo qemu-tap-helper.sh "$username" "$tap_nic" "$br_nic" "$wan_nic" down
+        sudo "${sudo_args[@]}" qemu-tap-helper.sh "$username" "$tap_nic" "$br_nic" "$wan_nic" down
+    ;;
+    virtarch)
+        sudo "${sudo_args[@]}" qemu-tap-helper.sh "$username" "$tap_nic" "$br_nic" "$wan_nic" up
+
+        qemu-system-x86_64 \
+            -name "$vm_name" \
+            -monitor stdio \
+            -enable-kvm -smp 2 -cpu host -m 1024 \
+            -vga qxl -spice port=5931,disable-ticketing \
+            -drive file="/home/lahwaacz/virtual_machines/archlinux.raw",if=virtio,cache=none -boot once=c \
+            -net nic,model=virtio,macaddr=$(qemu-mac-hasher.py "$vm_name") -net tap,ifname="$tap_nic",script=no,downscript=no \
+            -usbdevice tablet
+
+        sudo "${sudo_args[@]}" qemu-tap-helper.sh "$username" "$tap_nic" "$br_nic" "$wan_nic" down
     ;;
     winxp)
-        echo "Running qemu-tap-helper.sh"
-        sudo qemu-tap-helper.sh "$username" "$tap_nic" "$br_nic" "$wan_nic" up
+        sudo "${sudo_args[@]}" qemu-tap-helper.sh "$username" "$tap_nic" "$br_nic" "$wan_nic" up
 
         qemu-system-i386 \
             -name "$vm_name" \
             -monitor stdio \
             -enable-kvm -smp 2 -cpu host -m 1024 \
             -vga qxl -spice port=5930,disable-ticketing \
-            -drive file="/home/lahwaacz/Virtual.Machines/winxp.raw",if=virtio,cache=none -boot order=c \
+            -drive file="/home/lahwaacz/virtual_machines/winxp.raw",if=virtio,cache=none -boot order=c \
             -net nic,model=virtio,macaddr=$(qemu-mac-hasher.py "$vm_name") -net tap,ifname="$tap_nic",script=no,downscript=no \
             -usbdevice tablet \
             -soundhw ac97 \
             -localtime
 
-        echo "Running qemu-tap-helper.sh"
-        sudo qemu-tap-helper.sh "$username" "$tap_nic" "$br_nic" "$wan_nic" down
+        sudo "${sudo_args[@]}" qemu-tap-helper.sh "$username" "$tap_nic" "$br_nic" "$wan_nic" down
     ;;
     liveiso)
         if [[ -z "$2" ]]; then

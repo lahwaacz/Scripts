@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 outfile=$1
 ext=tif
 

@@ -1,0 +1,28 @@
+#!/bin/bash
+
+# Author: http://serverfault.com/users/96883/artfulrobot
+# License: Unknown
+#
+# This script will show most files that got modified or added.
+# Renames and deletions will not be shown.
+# Read limitations on:
+# http://serverfault.com/questions/399894/does-btrfs-have-an-efficient-way-to-compare-snapshots
+# 
+# btrfs send is the best way to do this long term, but as of kernel
+# 3.14, btrfs send cannot just send a list of changed files without
+# scanning and sending all the changed data blocks along.
+
+usage() { echo $@ >&2; echo "Usage: $0 <older-snapshot> <newer-snapshot>" >&2; exit 1; }
+
+[ $# -eq 2 ] || usage "Incorrect invocation";
+SNAPSHOT_OLD=$1;
+SNAPSHOT_NEW=$2;
+
+[ -d $SNAPSHOT_OLD ] || usage "$SNAPSHOT_OLD does not exist";
+[ -d $SNAPSHOT_NEW ] || usage "$SNAPSHOT_NEW does not exist";
+
+OLD_TRANSID=`btrfs subvolume find-new "$SNAPSHOT_OLD" 9999999`
+OLD_TRANSID=${OLD_TRANSID#transid marker was }
+[ -n "$OLD_TRANSID" -a "$OLD_TRANSID" -gt 0 ] || usage "Failed to find generation for $SNAPSHOT_NEW"
+
+btrfs subvolume find-new "$SNAPSHOT_NEW" $OLD_TRANSID | sed '$d' | cut -f17- -d' ' | sort | uniq

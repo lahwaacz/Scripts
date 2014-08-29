@@ -24,6 +24,9 @@ shittyfiles = [
     '~/.esd_auth',
     '~/.config/enchant',
     '~/.spicec',            # contains only log file; unconfigurable
+    '~/.dropbox-dist',
+    '~/.cache/mpd.log',     # MPD log file
+    '~/.parallel',
 ]
 
 

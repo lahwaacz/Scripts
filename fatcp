@@ -43,6 +43,8 @@ mk_target() {
 
 # dirs and files are handled differently
 if [[ -d "$base" ]]; then
+    target=$(mk_target "$base")
+    mkdir "$target"
     for src in "$base"/**/*; do
         target=$(mk_target "$src")
         if [[ -d "$src" ]]; then

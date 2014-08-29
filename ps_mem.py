@@ -198,6 +198,7 @@ def getMemStats(pid):
     Private_lines = []
     Shared_lines = []
     Pss_lines = []
+    Swap_lines = []
     Rss = (int(proc.open(pid, 'statm').readline().split()[1])
            * PAGESIZE)
     if os.path.exists(proc.path(pid, 'smaps')): #stat
@@ -213,11 +214,14 @@ def getMemStats(pid):
             elif line.startswith("Pss"):
                 have_pss = 1
                 Pss_lines.append(line)
+            elif line.startswith("Swap"):
+                Swap_lines.append(line)
         mem_id = digester.hexdigest()
         Shared = sum([int(line.split()[1]) for line in Shared_lines])
         Private = sum([int(line.split()[1]) for line in Private_lines])
         #Note Shared + Private = Rss above
         #The Rss in smaps includes video card mem etc.
+        Swap = sum([int(line.split()[1]) for line in Swap_lines])
         if have_pss:
             pss_adjust = 0.5 # add 0.5KiB as this avg error due to trunctation
             Pss = sum([float(line.split()[1])+pss_adjust for line in Pss_lines])
@@ -225,11 +229,13 @@ def getMemStats(pid):
     elif (2,6,1) <= kernel_ver() <= (2,6,9):
         Shared = 0 #lots of overestimation, but what can we do?
         Private = Rss
+        Swap = 0
     else:
         Shared = int(proc.open(pid, 'statm').readline().split()[2])
         Shared *= PAGESIZE
         Private = Rss - Shared
-    return (Private, Shared, mem_id)
+        Swap = 0
+    return (Private, Shared, Swap, mem_id)
 
 
 def getCmdName(pid, split_args):
@@ -331,6 +337,7 @@ def show_shared_val_accuracy( possible_inacc ):
 def get_memory_usage( pids_to_show, split_args, include_self=False, only_self=False ):
     cmds = {}
     shareds = {}
+    swaps = {}
     mem_ids = {}
     count = {}
     for pid in os.listdir(proc.path('')):
@@ -355,7 +362,7 @@ def get_memory_usage( pids_to_show, split_args, include_self=False, only_self=Fa
             continue
 
         try:
-            private, shared, mem_id = getMemStats(pid)
+            private, shared, swap, mem_id = getMemStats(pid)
         except RuntimeError:
             continue #process gone
         if shareds.get(cmd):
@@ -365,6 +372,11 @@ def get_memory_usage( pids_to_show, split_args, include_self=False, only_self=Fa
                 shareds[cmd] = shared
         else:
             shareds[cmd] = shared
+        if swaps.get(cmd):
+            # another process under the same name, add up
+            swaps[cmd] += swap
+        else:
+            swaps[cmd] = swap
         cmds[cmd] = cmds.setdefault(cmd, 0) + private
         if cmd in count:
             count[cmd] += 1
@@ -374,6 +386,7 @@ def get_memory_usage( pids_to_show, split_args, include_self=False, only_self=Fa
 
     #Add shared mem for each program
     total = 0
+    swaptotal = 0
     for cmd in cmds:
         cmd_count = count[cmd]
         if len(mem_ids[cmd]) == 1 and cmd_count > 1:
@@ -384,24 +397,26 @@ def get_memory_usage( pids_to_show, split_args, include_self=False, only_self=Fa
                 shareds[cmd] /= cmd_count
         cmds[cmd] = cmds[cmd] + shareds[cmd]
         total += cmds[cmd] #valid if PSS available
+        swaptotal += swaps[cmd]
 
     sorted_cmds = sorted(cmds.items(), key=lambda x:x[1])
     sorted_cmds = [x for x in sorted_cmds if x[1]]
 
-    return sorted_cmds, shareds, count, total
+    return sorted_cmds, shareds, swaps, count, total, swaptotal
 
 def print_header():
-    sys.stdout.write(" Private  +   Shared  =  RAM used\tProgram \n\n")
+    sys.stdout.write(" Private  +   Shared  =  RAM used\t     Swap\tProgram \n\n")
 
-def print_memory_usage(sorted_cmds, shareds, count, total):
+def print_memory_usage(sorted_cmds, shareds, swaps, count, total, swaptotal):
     for cmd in sorted_cmds:
-        sys.stdout.write("%8sB + %8sB = %8sB\t%s\n" %
+        sys.stdout.write("%8sB + %8sB = %8sB\t%8sB\t%s\n" %
                          (human(cmd[1]-shareds[cmd[0]]),
                           human(shareds[cmd[0]]), human(cmd[1]),
+                          human(swaps[cmd[0]]),
                           cmd_with_count(cmd[0], count[cmd[0]])))
     if have_pss:
-        sys.stdout.write("%s\n%s%8sB\n%s\n" %
-                         ("-" * 33, " " * 24, human(total), "=" * 33))
+        sys.stdout.write("%s\n%s%8sB%s%8sB\n%s\n" %
+                         ("-" * 49, " " * 24, human(total), " " * 7, human(swaptotal), "=" * 49))
 
 def verify_environment():
     if os.geteuid() != 0:
@@ -432,8 +447,8 @@ if __name__ == '__main__':
         try:
             sorted_cmds = True
             while sorted_cmds:
-                sorted_cmds, shareds, count, total = get_memory_usage( pids_to_show, split_args )
-                print_memory_usage(sorted_cmds, shareds, count, total)
+                sorted_cmds, shareds, swaps, count, total, swaptotal = get_memory_usage( pids_to_show, split_args )
+                print_memory_usage(sorted_cmds, shareds, swaps, count, total, swaptotal)
                 time.sleep(watch)
             else:
                 sys.stdout.write('Process does not exist anymore.\n')
@@ -441,8 +456,8 @@ if __name__ == '__main__':
             pass
     else:
         # This is the default behavior
-        sorted_cmds, shareds, count, total = get_memory_usage( pids_to_show, split_args )
-        print_memory_usage(sorted_cmds, shareds, count, total)
+        sorted_cmds, shareds, swaps, count, total, swaptotal = get_memory_usage( pids_to_show, split_args )
+        print_memory_usage(sorted_cmds, shareds, swaps, count, total, swaptotal)
 
 
     # We must close explicitly, so that any EPIPE exception
