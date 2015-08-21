@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#! /usr/bin/env python2
 
 # Show top disk space users in current directory,
 # while automatically recursing down directories if
