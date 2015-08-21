@@ -11,7 +11,6 @@ shittyfiles = [
     '~/.recently-used',
     '~/.local/share/recently-used.xbel',
     '~/Desktop',             # Firefox creates this
-    '~/.bzr.log',
     '~/.thumbnails',
     '~/.gconfd',
     '~/.gconf',
@@ -25,8 +24,15 @@ shittyfiles = [
     '~/.config/enchant',
     '~/.spicec',            # contains only log file; unconfigurable
     '~/.dropbox-dist',
-    '~/.cache/mpd.log',     # MPD log file
     '~/.parallel',
+    '~/.dbus',
+    '~/ca2',                # WTF?
+    '~/ca2~',               # WTF?
+    '~/.distlib/',          # contains another empty dir, don't know which software creates it
+    '~/.bazaar/',           # bzr insists on creating files holding default values
+    '~/.bzr.log',
+    '~/.nv/',
+    '~/.viminfo',           # configured to be moved to ~/.cache/vim/viminfo, but it is still sometimes created...
 ]
 
 
