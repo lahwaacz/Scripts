@@ -3,19 +3,19 @@
 opt=${1:-'-h'}
 dir=${2:-'.'}
 
-fmode=0600
-dmode=0700
+fmode=0644
+dmode=0755
 
 case "$1" in
     -a) # dirs and files
-        find "$2" -type d -exec chmod $dmode "{}" \;
-        find "$2" -type f -exec chmod $fmode "{}" \;
+        find "$2" -type d -exec chmod $dmode "{}" +
+        find "$2" -type f -exec chmod $fmode "{}" +
         ;;
     -d)
-        find "$2" -type d -exec chmod $dmode "{}" \;
+        find "$2" -type d -exec chmod $dmode "{}" +
         ;;
     -f) 
-        find "$2" -type f -exec chmod $fmode "{}" \;
+        find "$2" -type f -exec chmod $fmode "{}" +
         ;;
     *)
         printf "Usage: $(basename $0) option [directory]
