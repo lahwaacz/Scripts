@@ -1,4 +1,4 @@
-#! /usr/bin/env python2
+#! /usr/bin/env python3
 
 import sys 
 import os
@@ -8,10 +8,9 @@ from multiprocessing import cpu_count
 import threading
 from time import sleep
 
-import mutagen
-from mutagen.id3 import ID3, TXXX 
+import taglib
 
-# depends on python2-scandir-git <https://aur.archlinux.org/packages/python2-scandir-git>
+# depends on python-scandir-git <https://aur.archlinux.org/packages/python-scandir-git>
 import scandir
 
 from pythonscripts.logger import Logger
@@ -31,17 +30,12 @@ class ReplayGain:
         self.data_album = {}
 
         # options
-        self.fix_case = options.fix_case
         self.force = options.force
         self.force_album = options.force_album
         self.force_track = options.force_track
         self.files = files
 
     def run(self):
-        if self.fix_case:
-            self.convert_to_lowercase()
-            return
-
         # check if all files have ReplayGain tags; mp3gain runs very long
         if not (self.force or self.force_album or self.force_track) and self.all_files_have_replaygain_tags():
             self.log.error("All files already have ReplayGain tags, no action taken.")
@@ -49,44 +43,14 @@ class ReplayGain:
         if self.run_mp3gain():
             self.update_tags()
 
-    def convert_to_lowercase(self):
-        """ Convert existing REPLAYGAIN_* tags to lowercase.
-        """
-        for fname in self.files:
-            modified = False
-
-            # open id3 tag
-            try: 
-                id3 = ID3(fname) 
-            except:
-                continue
-
-            # update tag
-            for tag in id3.getall("TXXX"):
-                # already lowercase
-                if tag.desc.lower() == tag.desc:
-                    continue
-
-                if tag.desc.lower().startswith("replaygain_"):
-                    self.update_tag_lowercase(id3, tag)
-                    modified = True
-
-            # save tag
-            if modified: 
-                self.log.debug("saving modified ID3 tag") 
-                id3.save(fname) 
-
     def all_files_have_replaygain_tags(self):
         """ Quick analysis to determine if input files contain replaygain_* tags.
         """
         for fname in self.files:
             # open id3 tag
-            try: 
-                id3 = ID3(fname) 
-            except:
-                return False
+            f = taglib.File(fname) 
 
-            tags = set([tag.desc.lower() for tag in id3.getall("TXXX") if tag.desc.lower().startswith("replaygain_")])
+            tags = set([tag.lower() for tag in f.tags.keys() if tag.lower().startswith("replaygain_")])
             return tags == set(["replaygain_track_gain", "replaygain_album_gain", "replaygain_track_peak", "replaygain_album_peak"])
 
     def run_mp3gain(self):
@@ -148,44 +112,20 @@ class ReplayGain:
                 a_peak = t_peak
 
             # open id3 tag
-            try: 
-                id3 = ID3(fname) 
-            except mutagen.id3.error: 
-                self.log.info("no ID3 tag found, creating one") 
-                id3 = ID3() 
+            f = taglib.File(fname)
 
             # update tag
-            self.update_tag(id3, "replaygain_track_gain", "%.2f dB" % t_gain)
-            self.update_tag(id3, "replaygain_album_gain", "%.2f dB" % a_gain)
-            self.update_tag(id3, "replaygain_track_peak", "%.6f" % t_peak)
-            self.update_tag(id3, "replaygain_album_peak", "%.6f" % a_peak)
+            f.tags["REPLAYGAIN_TRACK_GAIN"] = "%.2f dB" % t_gain
+            f.tags["REPLAYGAIN_ALBUM_GAIN"] = "%.2f dB" % a_gain
+            f.tags["REPLAYGAIN_TRACK_PEAK"] = "%.6f" % t_peak
+            f.tags["REPLAYGAIN_ALBUM_PEAK"] = "%.6f" % a_peak
 
             # save tag
             self.log.debug("saving modified ID3 tag") 
-            id3.save(fname) 
+            f.save() 
 
             self.log.debug("done processing file") 
             self.log.filename = None 
-
-    def update_tag(self, id3, key, value):
-        """ Add or change 'value' of 'key' in 'id3'.
-            @param ID3 id3      - mutagen.id3.ID3 object
-            @param str key      - key (description) of the tag (will be added to TXXX frame)
-            @param str value    - new value of key
-        """
-        id3.add(TXXX(encoding=1, desc=key, text=value)) 
-        self.log.info("added ID3 '%s' tag with value '%s'" % (key, value)) 
-
-    def update_tag_lowercase(self, id3, tag):
-        """ Convert TXXX key to lowercase, keep original value.
-            @param ID3 id3      - mutagen.id3.ID3 object
-            @param TXXX value   - mutagen.id3.TXXX object - usually obtained by getall() method on ID3 object
-        """
-        name = tag.desc
-        value = str(tag)
-        id3.delall("TXXX:%s" % name)
-        id3.add(TXXX(encoding=1, desc=name.lower(), text=value)) 
-        self.log.info("converted '%s' to '%s' with value '%s'" % (name, name.lower(), value)) 
 
 
 # thread-safe iterating over generators
@@ -197,10 +137,10 @@ class LockedIterator(object):
     def __iter__(self):
         return self
 
-    def next(self):
+    def __next__(self):
         self.lock.acquire()
         try:
-            return self.it.next()
+            return next(self.it)
         finally:
             self.lock.release()
 
@@ -241,7 +181,7 @@ class Main:
     def worker(self, id):
         try:
             while not self.killed.is_set():
-                i = self.queue.next()
+                i = next(self.queue)
                 i = sorted(list(i))
 
                 # skip dirs not containing any mp3 file
@@ -257,6 +197,7 @@ class Main:
                     rg.run()
                 except Exception as e:
                     print(e)
+                    raise
         except StopIteration:
             pass
         finally:
@@ -316,7 +257,6 @@ if __name__ == "__main__":
     log.add_argument("-d", "--debug", dest="log_level", action="store_const", const=4, help="output debug messages") 
  
     parser.add_argument("-r", "--recursive", action="store_true", help="when path to directory is specified, browse it recursively (albums still respected)")
-    parser.add_argument("--fix-case", action="store_true", help="convert existing REPLAYGAIN_* tags to lowercase") 
     parser.add_argument("--force", action="store_true", help="force overwriting of existing ID3v2 ReplayGain tags") 
     group = parser.add_mutually_exclusive_group()
     group.add_argument("--force-album", action="store_true", help="write replaygain_album_{gain,peak} values into replaygain_track_{gain,peak} tags")
