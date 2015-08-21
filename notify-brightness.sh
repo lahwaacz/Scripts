@@ -7,7 +7,8 @@ duration=1500
 
 # get brightness level, set title
 level=$(cat "/sys/class/backlight/acpi_video0/brightness")
-percent=$(( $level * 100 / 15 ))
+max=$(cat "/sys/class/backlight/acpi_video0/max_brightness")
+percent=$(( $level * 100 / $max ))
 title="LCD brightness"
 
 # create fancy bar
