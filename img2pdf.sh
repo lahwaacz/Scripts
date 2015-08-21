@@ -7,7 +7,8 @@ ext=tif
 
 echo "Converting images to pdf..."
 declare -a pages
-for file in ./*.$ext; do
+# take input pattern "anything_number.ext", sort numerically by "number"
+for file in $(ls ./*.$ext | sort -t_ -k2,2n); do
     echo "  $file"
     pdf=$(basename "$file" .$ext).pdf
 #    convert "$file" "$pdf"
