@@ -10,9 +10,6 @@ from time import sleep
 
 import taglib
 
-# depends on python-scandir-git <https://aur.archlinux.org/packages/python-scandir-git>
-import scandir
-
 from pythonscripts.logger import Logger
 
 class ReplayGain:
@@ -211,7 +208,7 @@ class Main:
         def walk(root):
             dirs = []
             files = []
-            for entry in scandir.scandir(root):
+            for entry in os.scandir(root):
                 if entry.is_dir():
                     dirs.append(entry.name)
                 elif entry.is_file() and entry.name.endswith(".mp3"):
