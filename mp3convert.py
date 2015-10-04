@@ -9,9 +9,6 @@ from time import sleep
 import re
 import shutil
 
-# depends on python-scandir-git <https://aur.archlinux.org/packages/python-scandir-git>
-import scandir
-
 from pythonscripts.tempfiles import TempFiles
 from pythonscripts.subprocess_extensions import getstatusoutput
 from pythonscripts.ffparser import FFprobeParser
@@ -185,7 +182,7 @@ class Main():
         def walk(root):
             dirs = []
             files = []
-            for entry in scandir.scandir(root):
+            for entry in os.scandir(root):
                 if entry.is_dir():
                     dirs.append(entry.name)
                 elif entry.is_file():
