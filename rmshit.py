@@ -33,6 +33,7 @@ shittyfiles = [
     '~/.bzr.log',
     '~/.nv/',
     '~/.viminfo',           # configured to be moved to ~/.cache/vim/viminfo, but it is still sometimes created...
+    '~/.npm/',              # npm cache
 ]
 
 
