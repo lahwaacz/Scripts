@@ -51,7 +51,7 @@ case "$vm_name" in
             -enable-kvm -smp 2 -cpu host -m 1024 \
             -vga qxl -spice port=5931,disable-ticketing \
             -drive file="/home/lahwaacz/virtual_machines/archlinux-btrfs.raw",if=virtio,cache=none -boot once=c \
-            -net nic,model=virtio,macaddr=$(qemu-mac-hasher.py "$vm_name") -net tap,ifname="$tap_nic",script=no,downscript=no \
+            -net nic,model=virtio,macaddr=$(qemu-mac-hasher.py "$vm_name") -net tap,ifname="$tap_nic",script=no,downscript=no,vhost=on \
             -usbdevice tablet
 
         sudo "${sudo_args[@]}" qemu-tap-helper.sh "$username" "$tap_nic" "$br_nic" "$wan_nic" down
@@ -65,7 +65,7 @@ case "$vm_name" in
             -enable-kvm -smp 2 -cpu host -m 1024 \
             -vga qxl -spice port=5931,disable-ticketing \
             -drive file="/home/lahwaacz/virtual_machines/archlinux.raw",if=virtio,cache=none -boot once=c \
-            -net nic,model=virtio,macaddr=$(qemu-mac-hasher.py "$vm_name") -net tap,ifname="$tap_nic",script=no,downscript=no \
+            -net nic,model=virtio,macaddr=$(qemu-mac-hasher.py "$vm_name") -net tap,ifname="$tap_nic",script=no,downscript=no,vhost=on \
             -usbdevice tablet
 
         sudo "${sudo_args[@]}" qemu-tap-helper.sh "$username" "$tap_nic" "$br_nic" "$wan_nic" down
@@ -79,7 +79,7 @@ case "$vm_name" in
             -enable-kvm -smp 2 -cpu host -m 1024 \
             -vga qxl -spice port=5930,disable-ticketing \
             -drive file="/home/lahwaacz/virtual_machines/winxp.raw",if=virtio,cache=none -boot order=c \
-            -net nic,model=virtio,macaddr=$(qemu-mac-hasher.py "$vm_name") -net tap,ifname="$tap_nic",script=no,downscript=no \
+            -net nic,model=virtio,macaddr=$(qemu-mac-hasher.py "$vm_name") -net tap,ifname="$tap_nic",script=no,downscript=no,vhost=on \
             -usbdevice tablet \
             -soundhw ac97 \
             -localtime
