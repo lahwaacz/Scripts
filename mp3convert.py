@@ -8,9 +8,9 @@ import threading
 from time import sleep
 import re
 import shutil
+import subprocess
 
 from pythonscripts.tempfiles import TempFiles
-from pythonscripts.subprocess_extensions import getstatusoutput
 from pythonscripts.ffparser import FFprobeParser
 
 
@@ -42,15 +42,15 @@ def get_bitrate(filename):
 def convert(filename, output_extension, bitrate, delete_after=False):
     tmpfile = tmp.getTempFileName()
     command = ffmpeg_command % {"input": re.escape(filename), "bitrate": bitrate, "output": re.escape(tmpfile)}
-    status, output = getstatusoutput(command)
-    if status > 0:
-        tmp.remove(tmpfile)
-        raise ConversionError(filename, status, output)
-    else:
+    try:
+        subprocess.check_output(command, shell=True, stderr=subprocess.STDOUT, universal_newlines=True)
         if delete_after:
             os.remove(filename)
         shutil.move(tmpfile, os.path.splitext(filename)[0] + output_extension)
         tmp.remove(tmpfile)
+    except subprocess.CalledProcessError as e:
+        tmp.remove(tmpfile)
+        raise ConversionError(filename, e.returncode, e.output)
 
 
 # thread-safe iterating over generators
