@@ -34,6 +34,10 @@ shittyfiles = [
     '~/.nv/',
     '~/.viminfo',           # configured to be moved to ~/.cache/vim/viminfo, but it is still sometimes created...
     '~/.npm/',              # npm cache
+    '~/.java/',
+    '~/.oracle_jre_usage/',
+    '~/.jssc/',
+    '~/.tox/',              # cache directory for tox
 ]
 
 
