@@ -3,13 +3,13 @@
 import sys
 import os
 import argparse
-from multiprocessing import cpu_count
 import threading
 from time import sleep
 import re
 import shutil
 import subprocess
 
+from pythonscripts.cpu import cores_count
 from pythonscripts.tempfiles import TempFiles
 from pythonscripts.ffparser import FFprobeParser
 
@@ -86,11 +86,7 @@ class Main():
         self.outputExtension = "." + args.output_extension
         self.paths = args.path
 
-        try:
-            self.threads = cpu_count()
-        except NotImplementedError:
-            print("Unable to determine number of CPU cores, assuming one.")
-            self.threads = 1
+        self.threads = cores_count()
 
         self.killed = threading.Event()
         self.threadsFinished = 0

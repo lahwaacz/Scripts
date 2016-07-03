@@ -4,12 +4,12 @@ import sys
 import os
 import argparse
 import subprocess
-from multiprocessing import cpu_count
 import threading
 from time import sleep
 
 import taglib
 
+from pythonscripts.cpu import cores_count
 from pythonscripts.logger import Logger
 
 class ReplayGain:
@@ -154,11 +154,7 @@ class Main:
         del options.recursive   # don't want to pass it to ReplayGain object
         del options.files   # don't want to pass it to ReplayGain object
 
-        try:
-            self.threads = cpu_count()
-        except NotImplementedError:
-            print("Unable to determine number of CPU cores, assuming one.")
-            self.threads = 1
+        self.threads = cores_count()
 
         self.killed = threading.Event()
         self.threadsFinished = 0
