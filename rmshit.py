@@ -38,6 +38,7 @@ shittyfiles = [
     '~/.oracle_jre_usage/',
     '~/.jssc/',
     '~/.tox/',              # cache directory for tox
+    '~/.pylint.d/',
 ]
 
 
