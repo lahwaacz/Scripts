@@ -5,10 +5,10 @@ import sys
 import re
 import subprocess
 
-pkgname_regex = re.compile("^(?P<pkgname>[a-z0-9@._+-]+)-(?P<pkgver>[a-z0-9._]+)-(?P<arch>any|x86_64|i686)\.pkg\.tar\.xz(\.sig)?$")
+pkgname_regex = re.compile("^(?P<pkgname>[a-z0-9@._+-]+)-(?P<pkgver>[a-z0-9._:-]+)-(?P<arch>any|x86_64|i686)\.pkg\.tar(\.xz)?(\.sig)?$", re.IGNORECASE)
 
 def usage():
-    print("Simple utility to clean directories from old pkg.tar.xz files (Arch's packages), keeping only those currently installed")
+    print("Simple utility to clean directories from old Arch's package files, keeping only those currently installed")
     print("usage: %s PATH" % sys.argv[0])
     sys.exit(1)
 
@@ -21,23 +21,24 @@ if __name__ == "__main__":
         usage()
     os.chdir(path)
 
-    # list files in directory
-    files = sorted( [f for f in os.listdir() if os.path.isfile(f)] )
+    files = {}
 
     # remove files that don't match pkgname_reges from further processing!!
-    for f in files[:]:  # slicing makes copy
-        if not re.match(pkgname_regex, f):
-            files.remove(f)
+    for f in os.listdir():
+        if not os.path.isfile(f):
+            continue
+        match = re.match(pkgname_regex, f)
+        if match:
+            # strip extension for future comparison with expac's output
+            files[f] = "{pkgname}-{pkgver}-{arch}".format(**match.groupdict())
 
     # get list of installed packages
-    installed = subprocess.check_output("expac -Qs '%n-%v-%a.pkg.tar.xz'", shell=True, universal_newlines=True).splitlines()
+    installed = subprocess.check_output("expac -Qs '%n-%v-%a'", shell=True, universal_newlines=True).splitlines()
 
-    for f in files:
-        # match signature files against pkgname
-        if f.endswith(".sig"):
-            ff = f[:-4]
-        else:
-            ff = f
+    for f in sorted(files):
+        # compare with the key instead of the whole filename
+        # (drops file extensions like .pkg.tar.{xz,gz}{,.sig} )
+        ff = files[f]
 
         if ff in installed:
             print("Kept:    %s" % f)
