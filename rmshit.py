@@ -39,6 +39,14 @@ shittyfiles = [
     '~/.jssc/',
     '~/.tox/',              # cache directory for tox
     '~/.pylint.d/',
+    '~/.qute_test/',
+    '~/.QtWebEngineProcess/',
+    '~/.qutebrowser/',      # created empty, only with webengine backend
+    '~/.asy/',
+    '~/.cmake/',
+    '~/.gnome/',
+    '~/unison.log',
+    '~/.texlive/',
 ]
 
 
