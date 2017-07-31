@@ -2,6 +2,8 @@
 
 # recursively remove dead symlinks
 
+shopt -s globstar
+
 # non-recursive version: 'for itm in *'
 for itm in **/*
 do
