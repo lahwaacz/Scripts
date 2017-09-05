@@ -52,7 +52,6 @@ if __name__ == "__main__":
             to_update.add(data["fname"])
     if to_update:
         cmd = ["repo-add", "-n", "-s", db_path, *sorted(to_update)]
-        print("Updating packages:", to_update)
         subprocess.run(cmd, check=True)
     else:
         print("No packages to update.")
