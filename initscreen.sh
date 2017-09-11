@@ -17,11 +17,14 @@ if [[ $connected =~ "HDMI-0" ]]; then
     # both
     # HDMI-0 is primary, LVDS-0 is panned to be vertically aligned to the bottom
 #    xrandr --nograb --output HDMI-0 --auto --primary --output LVDS-0 --auto --left-of HDMI-0 --panning 1366x768+0+312
-    xrandr --output HDMI-0 --auto --primary --output LVDS-0 --auto --left-of HDMI-0 --panning 1366x768+0+312
-elif [[ $connected == "VGA-0" ]]; then
-    xrandr --nograb --output VGA-0 --auto --output LVDS-0 --mode 1024x768 --primary
+#    xrandr --output HDMI-0 --auto --primary --output LVDS-0 --auto --left-of HDMI-0 --panning 1366x768+0+312
+    xrandr --output HDMI-0 --auto --primary --output LVDS-0 --auto --right-of HDMI-0
+elif [[ $connected =~ "VGA-0" ]]; then
+#    xrandr --nograb --output VGA-0 --auto --output LVDS-0 --mode 1024x768 --primary
     # TODO:  look at --scale argument
+    xrandr --output VGA-0 --auto --primary --output LVDS-0 --auto --below VGA-0
 else
 #    xrandr --nograb --output LVDS-0 --auto --primary --output HDMI-0 --off
-    xrandr --output LVDS-0 --auto --primary --output HDMI-0 --off
+#    xrandr --output LVDS-0 --auto --primary --output HDMI-0 --off
+    xrandr --output LVDS-0 --auto --primary --output HDMI-0 --off --output VGA-0 --off
 fi
