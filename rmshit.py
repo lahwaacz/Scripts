@@ -47,6 +47,7 @@ shittyfiles = [
     '~/.gnome/',
     '~/unison.log',
     '~/.texlive/',
+    '~/.w3m/',
 ]
 
 
