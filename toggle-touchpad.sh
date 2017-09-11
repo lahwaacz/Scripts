@@ -2,10 +2,11 @@
 
 # toggle touchpad status
 
-off=$(synclient -l | grep TouchpadOff | awk -F '= ' '{ print $2 }')
+device="SynPS/2 Synaptics TouchPad"
+enabled=$(xinput --list-props "$device" | grep "Device Enabled" | awk '{print $NF}')
 
-if [[ "$off" == "0" ]]; then
-    synclient TouchpadOff=1
+if [[ "$enabled" == "1" ]]; then
+    xinput --disable "$device"
 else
-    synclient TouchpadOff=0
+    xinput --enable "$device"
 fi
