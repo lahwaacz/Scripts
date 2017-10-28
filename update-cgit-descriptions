@@ -1,0 +1,25 @@
+#! /bin/bash
+
+for path in "/srv/http/git/"{abs,aur,aur_mine}/*; do
+    pkgname=$(basename "$path")
+    pkgdesc=$(expac -Q "%d" "$pkgname")
+    if [[ "$pkgdesc" != "" ]]; then
+        pushd "$path" > /dev/null
+        git config --local gitweb.description "$pkgdesc"
+        popd > /dev/null
+    fi
+done
+
+for path in "/srv/http/git/abs/"*; do
+    pkgname=$(basename "$path")
+    pushd "$path" > /dev/null
+    git config --local gitweb.homepage "https://www.archlinux.org/packages/?name=$pkgname"
+    popd > /dev/null
+done
+
+for path in "/srv/http/git/"{aur,aur_mine}/*; do
+    pkgname=$(basename "$path")
+    pushd "$path" > /dev/null
+    git config --local gitweb.homepage "https://aur.archlinux.org/packages/$pkgname/"
+    popd > /dev/null
+done
