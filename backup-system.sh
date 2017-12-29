@@ -24,7 +24,7 @@ echo "Syncing ~/Music/ to $music"
 rsync ~/Music/ $music -aPhAHX --info=progress2,name0,stats2
 
 echo "Syncing ~/ to $homedir"
-rsync ~/ $homedir -aPhAHX --one-file-system --info=progress2,name0,stats2 --delete --exclude={"/build/builddir/","/build/pkgs/","/build/src/","/mnt/","/stuff/","/Music/"}
+rsync ~/ $homedir -aPhAHX --one-file-system --info=progress2,name0,stats2 --delete --exclude={"/build/builddir/","/build/pkgs/","/build/src/","/mnt/","/Music/"}
 
 FINISH=$(date +%s)
 echo "total time: $(( ($FINISH-$START) / 60 )) minutes, $(( ($FINISH-$START) % 60 )) seconds"
