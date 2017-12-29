@@ -87,7 +87,7 @@ if __name__ == "__main__":
     parser.add_argument("host", nargs="+", help="remote name specified in the config file")
     args = parser.parse_args()
 
-    mountpath = config.get("DEFAULT", "mountpath", fallback=DEFAULT_MOUNTPATH)
+    mountpath = os.path.expanduser(config.get("DEFAULT", "mountpath", fallback=DEFAULT_MOUNTPATH))
 
     if args.umount:
         for host in args.host:
