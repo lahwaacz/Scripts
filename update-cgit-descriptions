@@ -1,6 +1,6 @@
 #! /bin/bash
 
-for path in "/srv/http/git/"{abs,aur,aur_mine}/*; do
+for path in "/srv/http/git/"*/*; do
     pkgname=$(basename "$path")
     pkgdesc=$(expac -Q "%d" "$pkgname")
     if [[ "$pkgdesc" != "" ]]; then
