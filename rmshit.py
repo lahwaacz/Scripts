@@ -48,6 +48,7 @@ shittyfiles = [
     '~/unison.log',
     '~/.texlive/',
     '~/.w3m/',
+    '~/.subversion/',
 ]
 
 
