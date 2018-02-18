@@ -49,6 +49,7 @@ shittyfiles = [
     '~/.texlive/',
     '~/.w3m/',
     '~/.subversion/',
+    '~/nvvp_workspace/',    # created empty even when the path is set differently in nvvp
 ]
 
 
