@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
 import json
-import re
 import subprocess
+import shlex
 from pprint import pprint
 
 
@@ -11,7 +11,7 @@ ffprobe = "ffprobe -v quiet -print_format json -show_format -show_streams "
 
 class FFprobeParser:
     def __init__(self, path):
-        self.data = json.loads(subprocess.check_output(ffprobe + re.escape(path), shell=True, universal_newlines=True))
+        self.data = json.loads(subprocess.check_output(ffprobe + shlex.quote(path), shell=True, universal_newlines=True))
 
         self.format = self.data["format"]
         self.audio = None

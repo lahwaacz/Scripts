@@ -8,6 +8,7 @@ from time import sleep
 import re
 import shutil
 import subprocess
+import shlex
 
 from pythonscripts.cpu import cores_count
 from pythonscripts.tempfiles import TempFiles
@@ -41,7 +42,7 @@ def get_bitrate(filename):
 
 def convert(filename, output_extension, bitrate, delete_after=False):
     tmpfile = tmp.getTempFileName()
-    command = ffmpeg_command % {"input": re.escape(filename), "bitrate": bitrate, "output": re.escape(tmpfile)}
+    command = ffmpeg_command % {"input": shlex.quote(filename), "bitrate": bitrate, "output": shlex.quote(tmpfile)}
     try:
         subprocess.check_output(command, shell=True, stderr=subprocess.STDOUT, universal_newlines=True)
         if delete_after:
