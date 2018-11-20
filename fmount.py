@@ -45,7 +45,7 @@ def mount(name, mountpath, config):
 
 def umount(mntpoint):
     if os.path.ismount(path):
-        cmd = ["fusermount", "-u", mntpoint]
+        cmd = ["fusermount3", "-u", mntpoint]
         subprocess.run(cmd, check=True)
     clean(mntpoint)
 
