@@ -1,4 +1,4 @@
-#! /usr/bin/bash
+#! /bin/bash
 
 # Some references:
 # https://wiki.archlinux.org/index.php/Bash#Functions
