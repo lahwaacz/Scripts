@@ -16,16 +16,16 @@ function extract() {
     extension=${fname##*.}
 
     # remove extension from basename
-    basename=$(basename ${fname%.*})
+    basename=$(basename "${fname%.*}")
 
     # hack to recognize .tar.gz etc as extension
     if [[ "${basename##*.}" == "tar" ]]; then
         extension="${basename##*.}.$extension"
-        basename=$(basename ${basename%.*})
+        basename=$(basename "${basename%.*}")
     fi
 
     # split \.part[0-9]* from $basename
-    basename=${basename%\.part[0-9]*}
+    basename="${basename%\.part[0-9]*}"
 
     case "$extension" in
         tar.gz|tgz|tar.bz2|tbz|tbz2|tar.xz|txz|tar.lzma|tlz|tar)
