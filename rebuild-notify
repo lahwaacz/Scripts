@@ -1,0 +1,33 @@
+#!/bin/bash
+
+set -e
+
+source "/usr/share/makepkg/util/message.sh"
+colorize
+
+# all local packages which are not in the official repositories
+targets=( $(comm -23 <(pacman -Qq | sort) <(pacman -Slq core extra community | sort)) )
+
+msg "Checking versions of local packages..."
+
+# go over the targets and if a package provides 'foo' and 'foo' is in the sync
+# repositories with a newer version, trigger a warning
+while read -r line; do
+    # split line by spaces: first word is the pkgname, second its pkgver,
+    # the rest are its provides
+    _items=($line)
+    pkgname="${_items[0]}"
+    pkgver="${_items[1]}"
+    provides=(${_items[@]:2})
+
+    for pkg in ${provides[@]}; do
+        ver=$(expac -S "%v" "$pkg" || true)
+
+        # skip invalid packages (provides can be invalid pkgname)
+        [[ -z "$ver" ]] && continue
+
+        if (( $(vercmp "$pkgver" "$ver") < 0 )); then
+            warning "old local package: $pkgname=$pkgver (remote: $pkg=$ver)"
+        fi
+    done
+done < <(expac -Q "%n %v %S" ${targets[@]})
