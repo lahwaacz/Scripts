@@ -10,7 +10,7 @@ fi
 hostname=$(ssh "$host" "hostname")
 
 if [[ "$hostname" == "teslon" ]]; then
-    ssh -C -t -L "localhost:11111:$hostname:11111" "$host" "bash -lc 'module load mpi/openmpi-x86_64 paraview && mpirun -np 4 pvserver -display :0'"
+    ssh -C -t -L "localhost:11111:$hostname:11111" "$host" "bash -lc 'module load mpi/openmpi3-x86_64 paraview/5.6.0 && mpirun -np 4 pvserver -display :0'"
 else
     ssh -C -t -L "localhost:11111:$hostname:11111" "$host" "mpirun -np 2 pvserver -display :0"
 fi
