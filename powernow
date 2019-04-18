@@ -77,8 +77,8 @@ for i in /sys/class/scsi_host/host*/link_power_management_policy; do display_opt
 display_opt /sys/module/snd_hda_intel/parameters/power_save
 display_opt /sys/module/snd_hda_intel/parameters/power_save_controller
 
-# wlan0 powersave
-display_wireless wlan0
+# wifi powersave
+display_wireless wlo1
 
 # Screen powersave
 for i in /sys/class/backlight/acpi_video*/brightness; do display_opt $i; done
