@@ -5,12 +5,23 @@ filename="$HOME/Bbox/shared/screenshot-%Y-%m-%d@%H:%M:%S.png"
 screenshot() {
     case $1 in
     full)
-        scrot -m $filename
+        if [[ "$SWAYSOCK" != "" ]]; then
+            grim $(date +"$filename")
+        else
+            scrot -m "$filename"
+        fi
         notify-send "Taken screenshot:" $(date +$(basename $filename))
         ;;
-    window)
-        sleep 1
-        scrot -s $filename
+    select)
+        if [[ "$SWAYSOCK" != "" ]]; then
+            local geometry=$(slurp 2>/dev/null)
+            if [[ "$geometry" == "" ]]; then
+                return
+            fi
+            grim -g "$geometry" $(date +"$filename")
+        else
+            scrot -s $filename
+        fi
         notify-send "Taken screenshot:" $(date +$(basename $filename))
         ;;
     *)
