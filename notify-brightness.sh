@@ -6,8 +6,8 @@
 duration=1500
 
 # get brightness level, set title
-level=$(cat "/sys/class/backlight/acpi_video0/brightness")
-max=$(cat "/sys/class/backlight/acpi_video0/max_brightness")
+level=$(cat "/sys/class/backlight/intel_backlight/brightness")
+max=$(cat "/sys/class/backlight/intel_backlight/max_brightness")
 percent=$(( $level * 100 / $max ))
 title="LCD brightness"
 
