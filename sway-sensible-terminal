@@ -1,0 +1,36 @@
+#! /usr/bin/env python3
+
+import os
+import sys
+import json
+import subprocess
+
+PATH = os.environ.get("PATH", "/usr/bin")
+TERMINAL = os.environ.get("TERMINAL", "tinyterm")
+ARGS = sys.argv[1:]
+
+def get_cwd(tree):
+    for node in tree.get("nodes", []):
+        if node["focused"]:
+            name = node["name"]
+            for part in name.split(":"):
+                if part.startswith("/") and os.path.exists(part):
+                    return part
+        cwd = get_cwd(node)
+        if cwd is not None:
+            return cwd
+
+cmd = subprocess.run("swaymsg -t get_tree", shell=True, check=True, capture_output=True)
+tree = json.loads(cmd.stdout)
+cwd = get_cwd(tree)
+if cwd is not None:
+    ARGS = ["-d", cwd, *ARGS]
+
+for d in PATH.split(":"):
+    path = os.path.join(d, TERMINAL)
+    if not os.path.isfile(path):
+        continue
+
+    os.execl(path, path, *ARGS)
+
+raise Exception("Error: terminal '{}' was not found in $PATH ({})".format(TERMINAL, PATH))
