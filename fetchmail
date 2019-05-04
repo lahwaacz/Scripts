@@ -1,30 +1,35 @@
 #!/bin/bash
 
-MBOX_TMPFILE="$XDG_RUNTIME_DIR/mbox_geraldine"
+#MBOX_TMPFILE="$XDG_RUNTIME_DIR/mbox_geraldine"
+MBOX_TMPFILE="$HOME/Maildir/geraldine_mbox.tmp"
 MAILDIR="$HOME/Maildir/FJFI/INBOX"
 
 set -e
 
-echo "Fetching from geraldine.fjfi.cvut.cz"
+if [[ -s "$MBOX_TMPFILE" ]]; then
+    echo "Running fdm early to process leftover files in $MBOX_TMPFILE"
+    fdm -f "$XDG_CONFIG_HOME/mail/fdm.conf" -a "geraldine" fetch
+fi
+if [[ -s "$MBOX_TMPFILE" ]]; then
+    echo "ERROR: fdm did not process all messages in $MBOX_TMPFILE" >&2
+    exit 1
+fi
+
+echo "Transferring mbox from geraldine.fjfi.cvut.cz"
 messages=$(ssh geraldine '$HOME/.local/bin/messages -q')
 if [[ "$messages" != "0" ]]; then
     # NOTE: movemail supports locking
     ssh geraldine '$HOME/.local/bin/movemail /var/mail/klinkovsky $HOME/mbox'
     scp -q geraldine:mbox "$MBOX_TMPFILE"
-    movemail "$MBOX_TMPFILE" "maildir://$MAILDIR"
-    rm "$MBOX_TMPFILE"
     ssh geraldine 'rm $HOME/mbox'
 fi
 
-count-unread-mails.sh
-
-echo "Fetching from mail.fjfi.cvut.cz"
-getmail --rcfile="$XDG_CONFIG_HOME/mail/getmailrc" --getmaildir="$XDG_CACHE_HOME/getmail" --quiet
+fdm -f "$XDG_CONFIG_HOME/mail/fdm.conf" fetch
 
 count-unread-mails.sh
 
 # synchronize with jlk.fjfi.cvut.cz
 if [[ $(hostname) != "jlk.fjfi.cvut.cz" ]]; then
     echo "Synchronizing maildir with jlk.fjfi.cvut.cz"
-    unison maildir -batch -silent
+    unison maildir -batch -silent -log=false
 fi
