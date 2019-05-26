@@ -20,7 +20,7 @@ messages=$(ssh geraldine '$HOME/.local/bin/messages -q')
 if [[ "$messages" != "0" ]]; then
     # NOTE: movemail supports locking
     ssh geraldine '$HOME/.local/bin/movemail /var/mail/klinkovsky $HOME/mbox'
-    scp -q geraldine:mbox "$MBOX_TMPFILE"
+    scp -Cq geraldine:mbox "$MBOX_TMPFILE"
     ssh geraldine 'rm $HOME/mbox'
 fi
 
