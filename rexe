@@ -77,7 +77,7 @@ echo "Uploading local directory '$LOCAL_PATH' to remote directory '$REMOTE_PATH'
 rsync -rlptD "$LOCAL_PATH/" "$HOST:$REMOTE_PATH/" -e ssh --info=progress2 --delete
 
 echo "Executing remote command '$CMD'..."
-ssh -t "$HOST" "cd $REMOTE_PATH; bash --login -c -- $CMD"
+ssh -t "$HOST" "cd $REMOTE_PATH; bash --login -c -- '$CMD'"
 
 echo "Synchronizing remote directory '$REMOTE_PATH' into the local directory..."
 rsync -rlptD "$HOST:$REMOTE_PATH/" "$LOCAL_PATH/" -e ssh --info=progress2 --delete
