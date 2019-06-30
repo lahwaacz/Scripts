@@ -1,0 +1,83 @@
+#!/bin/bash
+
+set -e
+
+HOST=""
+LOCAL_PATH=""
+REMOTE_PATH=""
+DEFAULT_REMOTE_PATH="/tmp"
+CMD=""
+
+function handle_argument()
+{
+    if [[ "$HOST" == "" ]]; then
+        case "$1" in
+            *:*)
+                HOST="${1%:*}"
+                REMOTE_PATH="${1#*:}"
+                ;;
+            *)
+                HOST="$1"
+                ;;
+        esac
+        return
+    fi
+    if [[ "$CMD" == "" ]]; then
+        CMD="$1"
+    else
+        CMD="$CMD $1"
+    fi
+}
+
+while [ "$#" -gt 0 ]; do
+    if [[ "$CMD" == "" ]]; then
+        case "$1" in
+            --path=*) LOCAL_PATH="${1#*=}"; shift 1;;
+            -p|--path) LOCAL_PATH="$2"; shift 2;;
+
+            -*) echo "unknown option: $1" >&2; exit 1;;
+            *) handle_argument "$1"; shift 1;;
+        esac
+    else
+        handle_argument "$1"
+        shift 1
+    fi
+done
+
+# fill in defaults
+if [[ "$LOCAL_PATH" == "" ]]; then
+    LOCAL_PATH=$(pwd)
+fi
+if [[ "$REMOTE_PATH" == "" ]]; then
+    REMOTE_PATH="/tmp"
+fi
+
+if [[ "$HOST" == "" ]]; then
+    echo "error: remote host was not specified." >&2
+    exit 1
+fi
+if [[ "$CMD" == "" ]]; then
+    echo "error: remote command was not sepcified." >&2
+    exit 1
+fi
+if [[ ! -d "$LOCAL_PATH" ]]; then
+    echo "error: local path '$LOCAL_PATH' is does not exist or is not a directory." >&2
+    exit 1
+fi
+
+# change remote path into full path
+_basename=$(basename "$LOCAL_PATH")
+REMOTE_PATH="$REMOTE_PATH/rexe/$_basename"
+
+# create remote directory
+echo "Creating remote directory '$REMOTE_PATH'..."
+ssh "$HOST" mkdir -p "$REMOTE_PATH"
+
+echo "Uploading local directory '$LOCAL_PATH' to remote directory '$REMOTE_PATH'..."
+rsync -rlptD "$LOCAL_PATH/" "$HOST:$REMOTE_PATH/" -e ssh --info=progress2 --delete
+
+echo "Executing remote command '$CMD'..."
+ssh -t "$HOST" "cd $REMOTE_PATH; bash --login -c -- $CMD"
+
+echo "Synchronizing remote directory '$REMOTE_PATH' into the local directory..."
+rsync -rlptD "$HOST:$REMOTE_PATH/" "$LOCAL_PATH/" -e ssh --info=progress2 --delete
