@@ -7,6 +7,7 @@ LOCAL_PATH=""
 REMOTE_PATH=""
 DEFAULT_REMOTE_PATH="/tmp"
 CMD=""
+DOWNLOAD="true"
 
 function handle_argument()
 {
@@ -34,6 +35,7 @@ while [ "$#" -gt 0 ]; do
         case "$1" in
             --path=*) LOCAL_PATH="${1#*=}"; shift 1;;
             -p|--path) LOCAL_PATH="$2"; shift 2;;
+            --no-download) DOWNLOAD="false"; shift 1;;
 
             -*) echo "unknown option: $1" >&2; exit 1;;
             *) handle_argument "$1"; shift 1;;
@@ -79,5 +81,7 @@ rsync -rlptD "$LOCAL_PATH/" "$HOST:$REMOTE_PATH/" -e ssh --info=progress2 --dele
 echo "Executing remote command '$CMD'..."
 ssh -t "$HOST" "cd $REMOTE_PATH; bash --login -c -- '$CMD'"
 
-echo "Synchronizing remote directory '$REMOTE_PATH' into the local directory..."
-rsync -rlptD "$HOST:$REMOTE_PATH/" "$LOCAL_PATH/" -e ssh --info=progress2 --delete
+if [[ "$DOWNLOAD" != "false" ]]; then
+    echo "Synchronizing remote directory '$REMOTE_PATH' into the local directory..."
+    rsync -rlptD "$HOST:$REMOTE_PATH/" "$LOCAL_PATH/" -e ssh --info=progress2 --delete
+fi
