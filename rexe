@@ -5,7 +5,6 @@ set -e
 HOST=""
 LOCAL_PATH=""
 REMOTE_PATH=""
-DEFAULT_REMOTE_PATH="/tmp"
 CMD=""
 DOWNLOAD="true"
 EXCLUDE=()
@@ -49,14 +48,6 @@ while [ "$#" -gt 0 ]; do
     fi
 done
 
-# fill in defaults
-if [[ "$LOCAL_PATH" == "" ]]; then
-    LOCAL_PATH=$(pwd)
-fi
-if [[ "$REMOTE_PATH" == "" ]]; then
-    REMOTE_PATH="/tmp"
-fi
-
 if [[ "$HOST" == "" ]]; then
     echo "error: remote host was not specified." >&2
     exit 1
@@ -65,6 +56,18 @@ if [[ "$CMD" == "" ]]; then
     echo "error: remote command was not sepcified." >&2
     exit 1
 fi
+
+# fill in defaults
+if [[ "$LOCAL_PATH" == "" ]]; then
+    LOCAL_PATH=$(pwd)
+fi
+if [[ "$REMOTE_PATH" == "" ]]; then
+    REMOTE_PATH=$(ssh "$HOST" echo '$XDG_RUNTIME_DIR')
+fi
+if [[ "$REMOTE_PATH" == "" ]]; then
+    REMOTE_PATH="/tmp"
+fi
+
 if [[ ! -d "$LOCAL_PATH" ]]; then
     echo "error: local path '$LOCAL_PATH' is does not exist or is not a directory." >&2
     exit 1
