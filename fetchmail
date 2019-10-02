@@ -24,6 +24,8 @@ if [[ "$messages" != "0" ]]; then
     ssh geraldine 'rm $HOME/mbox'
 fi
 
+count-unread-mails.sh
+
 fdm -f "$XDG_CONFIG_HOME/mail/fdm.conf" fetch
 
 count-unread-mails.sh
