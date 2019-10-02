@@ -101,6 +101,26 @@ case "$vm_name" in
             -net nic -net user \
             -usbdevice tablet
     ;;
+    liveiso-efi)
+        if [[ -z "$2" ]]; then
+            echo "You must specify the ISO file as a second argument." >&2
+            exit 1
+        fi
+        if [[ ! -e "/usr/share/ovmf/x64/OVMF_CODE.fd" ]]; then
+            echo "File /usr/share/ovmf/x64/OVMF_CODE.fd does not exist. Is the package ovmf installed?" >&2
+            exit 1
+        fi
+
+        qemu-system-x86_64 \
+            -bios /usr/share/ovmf/x64/OVMF_CODE.fd \
+            -name "$vm_name" \
+            -monitor stdio \
+            -enable-kvm -smp 2 -cpu host -m 1024 \
+            -vga std \
+            -drive file="$2",if=virtio,media=cdrom -boot once=d \
+            -net nic -net user \
+            -usbdevice tablet
+    ;;
     *)
         echo "Unknown VM name specified: $vm_name" >&2
         exit 1
