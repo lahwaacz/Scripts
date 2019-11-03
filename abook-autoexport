@@ -2,7 +2,7 @@
 #
 # abook export script to sync abook & mutt/alias by armin wolfermann
 
-addressbook=~/Bbox/addressbook.abook
+addressbook=~/Maildir/addressbook.abook
 abook --datafile $addressbook ${@}
 abook --convert \
 	--informat abook --infile $addressbook \
