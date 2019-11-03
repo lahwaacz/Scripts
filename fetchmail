@@ -1,14 +1,13 @@
 #!/bin/bash
 
-#MBOX_TMPFILE="$XDG_RUNTIME_DIR/mbox_geraldine"
-MBOX_TMPFILE="$HOME/Maildir/geraldine_mbox.tmp"
-MAILDIR="$HOME/Maildir/FJFI/INBOX"
+MBOX_TMPFILE="$HOME/Maildir/.geraldine_mbox.tmp"
+MAILDIR="$HOME/Maildir"
 
 set -e
 
 if [[ -s "$MBOX_TMPFILE" ]]; then
     echo "Running fdm early to process leftover files in $MBOX_TMPFILE"
-    fdm -f "$XDG_CONFIG_HOME/mail/fdm.conf" -a "geraldine" fetch
+    fdm -f "$MAILDIR/fdm.conf" -a "geraldine" fetch
 fi
 if [[ -s "$MBOX_TMPFILE" ]]; then
     echo "ERROR: fdm did not process all messages in $MBOX_TMPFILE" >&2
@@ -26,7 +25,7 @@ fi
 
 count-unread-mails.sh
 
-fdm -f "$XDG_CONFIG_HOME/mail/fdm.conf" fetch
+fdm -f "$MAILDIR/fdm.conf" fetch
 
 count-unread-mails.sh
 
