@@ -28,7 +28,7 @@ function extract() {
     basename="${basename%\.part[0-9]*}"
 
     case "$extension" in
-        tar.gz|tgz|tar.bz2|tbz|tbz2|tar.xz|txz|tar.lzma|tlz|tar)
+        tar.gz|tgz|tar.bz2|tbz|tbz2|tar.xz|txz|tar.lzma|tlz|tar|tar.zst)
             mkdir "$basename"
             tar xvf "$fname" -C "$basename"
             ;;
@@ -40,6 +40,9 @@ function extract() {
             ;;
         xz|lzma)
             xz -dkv "$fname"
+            ;;
+        zst)
+            zstd -dkv "$fname"
             ;;
         zip)
             unzip "$fname" -d "$basename"
@@ -57,7 +60,7 @@ function extract() {
             echo "extract: '$fname' cannot be extracted" 1>&2
             success=1
             ;;
-    esac 
+    esac
 
     [[ $success == 0 ]] && success=$?
 
