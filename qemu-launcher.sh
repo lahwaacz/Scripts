@@ -37,7 +37,7 @@ sudo_args=("-Ap" "Enter your root password (QEMU launcher script)")
 username=$(whoami)
 tap_limit=10            # maximum number of TAP interfaces created by this script
 tap_nic=$(get_tap_name)
-br_nic="qemu-br0"       # bridge interface name (will be created)
+br_nic="br0-qemu"       # bridge interface name (will be created)
 wan_nic="wlan0"         # WAN interface name (for NAT)
 
 
