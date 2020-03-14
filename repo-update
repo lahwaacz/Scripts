@@ -8,7 +8,7 @@ import subprocess
 from pyalpm import vercmp
 
 db_path = "jlk.db.tar.xz"
-pkgname_regex = re.compile("^(?P<pkgname>[a-z0-9@._+-]+)-(?P<pkgver>[a-z0-9._:]+)-(?P<pkgrel>[a-z0-9._:]+)-(?P<arch>any|x86_64|i686)\.pkg\.tar(\.xz|\.zst)?$", re.IGNORECASE)
+pkgname_regex = re.compile("^(?P<pkgname>[a-z0-9@._+-]+)-(?P<pkgver>[a-z0-9._:+]+)-(?P<pkgrel>[a-z0-9._:+]+)-(?P<arch>any|x86_64|i686)\.pkg\.tar(\.xz|\.zst)?$", re.IGNORECASE)
 
 if __name__ == "__main__":
     path = os.path.expanduser("~/build/pkgs/")
