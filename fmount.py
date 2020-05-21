@@ -1,5 +1,6 @@
 #! /usr/bin/env python3
 
+import sys
 import os
 import argparse
 import configparser
@@ -22,7 +23,7 @@ def mount(name, mountpath, config):
     path = config.get(name, "path", fallback="")
     user = config.get(name, "user", fallback=None)
     port = config.get(name, "port", fallback=None)
-    mntopts = config.get(name, "mntopts", fallback=[])
+    mntopts = config.get(name, "mntopts", fallback="")
     mntopts = reformat_mntopts(mntopts)
 
     uhd = host + ":" + path
@@ -97,11 +98,11 @@ if __name__ == "__main__":
             else:
                 path = os.path.join(mountpath, host)
                 if not os.path.isdir(path):
-                    parser.error("Path '{}' does not exist.".format(path))
+                    print("Note: path '{}' does not exist.".format(path), file=sys.stderr)
             if os.path.ismount(path):
                 umount(path)
-            else:
-                parser.error("Path '{}' is not a mount point.".format(path))
+            elif os.path.isdir(path):
+                print("Note: path '{}' is not a mount point.".format(path), file=sys.stderr)
     else:
         for host in args.host:
             if config.has_section(host):
