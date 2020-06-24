@@ -50,7 +50,7 @@ function extract() {
         rar)
             mkdir "$basename"
             pushd "$basename"
-                unrar e "$fname"
+                unrar x "$fname"
             popd
             ;;
         7z)
