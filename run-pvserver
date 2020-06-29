@@ -15,5 +15,6 @@ if [[ "$hostname" == "teslon" ]]; then
 #elif [[ "$hostname" == "gp2.fjfi.cvut.cz" ]]; then
 #    ssh -C -t -L "localhost:11111:$hostname:$port" "$host" "bash -lc 'module load ParaView/5.6.1-osmesa-bin && mpiexec -np 4 pvserver -display :0 --server-port=$port'"
 else
-    ssh -C -t -L "localhost:$port:$hostname:$port" "$host" "mpirun -np 2 pvserver -display :0 --server-port=$port"
+    # NOTE: bash -lc is needed to get full $PATH by sourcing /etc/profile.d/*.sh
+    ssh -C -t -L "localhost:$port:$hostname:$port" "$host" "bash -lc 'mpirun -np 2 pvserver -display :0 --server-port=$port'"
 fi
