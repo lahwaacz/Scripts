@@ -51,6 +51,8 @@ shittyfiles = [
     '~/.subversion/',
     '~/nvvp_workspace/',    # created empty even when the path is set differently in nvvp
     '~/.ansible/',
+    '~/.fltk/',
+    '~/.vnc/',
 ]
 
 
