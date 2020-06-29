@@ -96,7 +96,8 @@ case "$vm_name" in
             -name "$vm_name" \
             -monitor stdio \
             -enable-kvm -smp 2 -cpu host -m 1024 \
-            -vga std \
+            -vga virtio \
+            -display gtk,gl=on \
             -drive file="$2",if=virtio,media=cdrom -boot once=d \
             -net nic -net user \
             -usbdevice tablet
@@ -116,7 +117,8 @@ case "$vm_name" in
             -name "$vm_name" \
             -monitor stdio \
             -enable-kvm -smp 2 -cpu host -m 1024 \
-            -vga std \
+            -vga virtio \
+            -display gtk,gl=on \
             -drive file="$2",if=virtio,media=cdrom -boot once=d \
             -net nic -net user \
             -usbdevice tablet
