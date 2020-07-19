@@ -8,5 +8,4 @@ sys.path.append(os.path.dirname(__file__))
 
 from misc import *
 from tempfiles import *
-from subprocess_extensions import *
 from terminal import *
