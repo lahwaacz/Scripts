@@ -3,8 +3,8 @@
 import sys
 import os
 import argparse
-import threading
-from time import sleep
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
 import re
 import shutil
 import subprocess
@@ -17,7 +17,7 @@ from pythonscripts.ffparser import FFprobeParser
 
 audio_types = ("mp3", "aac", "ac3", "mp2", "wma", "wav", "mka", "m4a", "ogg", "oga", "flac")
 audio_file_regex = re.compile("^(?P<dirname>/(.*/)*)(?P<filename>.*(?P<extension>\.(" + "|".join(audio_types) + ")))$")
-ffmpeg_command = "/usr/bin/ffmpeg -i %(input)s -acodec libmp3lame -ar 44100 -ab %(bitrate)dk -ac 2 -f mp3 -map_metadata 0 -y %(output)s"
+ffmpeg_command = "ffmpeg -i {input} -acodec libmp3lame -ar 44100 -ab {bitrate:d}k -ac 2 -f mp3 -map_metadata 0 -y {output}"
 
 
 class GettingBitrateError(Exception):
@@ -42,7 +42,7 @@ def get_bitrate(filename):
 
 def convert(filename, output_extension, bitrate, delete_after=False):
     tmpfile = tmp.getTempFileName()
-    command = ffmpeg_command % {"input": shlex.quote(filename), "bitrate": bitrate, "output": shlex.quote(tmpfile)}
+    command = ffmpeg_command.format(input=shlex.quote(filename), bitrate=bitrate, output=shlex.quote(tmpfile))
     try:
         subprocess.check_output(command, shell=True, stderr=subprocess.STDOUT, universal_newlines=True)
         if delete_after:
@@ -52,23 +52,6 @@ def convert(filename, output_extension, bitrate, delete_after=False):
     except subprocess.CalledProcessError as e:
         tmp.remove(tmpfile)
         raise ConversionError(filename, e.returncode, e.output)
-
-
-# thread-safe iterating over generators
-class LockedIterator(object):
-    def __init__(self, it):
-        self.lock = threading.Lock()
-        self.it = it.__iter__()
-
-    def __iter__(self):
-        return self
-
-    def __next__(self):
-        self.lock.acquire()
-        try:
-            return next(self.it)
-        finally:
-            self.lock.release()
 
 
 class Main():
@@ -86,12 +69,6 @@ class Main():
         self.deleteAfter = args.delete_after
         self.outputExtension = "." + args.output_extension
         self.paths = args.path
-
-        self.threads = cores_count()
-
-        self.killed = threading.Event()
-        self.threadsFinished = 0
-        self.queue = LockedIterator(self.queue_generator())
 
     def print_stats(self):
         print()
@@ -127,49 +104,44 @@ class Main():
             return True
         return False
 
-    def run(self):
-        for i in range(self.threads):
-            t = threading.Thread(target=self.worker, args=(i + 1,))
-            t.start()
-
-        try:
-            while self.threadsFinished < self.threads:
-                sleep(0.5)
-        except (KeyboardInterrupt, SystemExit):
-            self.killed.set()
+    async def run(self):
+        # We could use the default single-threaded executor with basically the same performance
+        # (because of Python's GIL), but the ThreadPoolExecutor allows to limit the maximum number
+        # of workers and thus the maximum number of concurrent subprocesses.
+        with ThreadPoolExecutor(max_workers=cores_count()) as executor:
+            loop = asyncio.get_event_loop()
+            tasks = [
+                loop.run_in_executor(executor, self.worker, path)
+                for path in self.queue_generator()
+            ]
+            for result in await asyncio.gather(*tasks):
+                pass
 
         self.print_stats()
 
-    def worker(self, id):
+    def worker(self, path):
+        path = os.path.abspath(path)
+
         try:
-            while not self.killed.is_set():
-                i = next(self.queue)
-                i = os.path.abspath(i)
-
-                try:
-                    # check bitrate/filetype etc., skip if conversion not necessary
-                    if not self.check(i) or self.dry_run:
-                        continue
-                    convert(i, self.outputExtension, self.bitrate, self.deleteAfter)
-                except ConversionError as e:
-                    msg = "ERROR: failed to convert file '%s'\n" % i
-                    if self.verbose > 0:
-                        msg += e.message + "\n"
-                    sys.stdout.write(msg)
-                    self.countErrors += 1
-                except GettingBitrateError as e:
-                    msg = "ERROR: failed to get bitrate from file '%s'" % i
-                    if self.verbose > 0:
-                        msg += e.message + "\n"
-                    sys.stdout.write(msg)
-                    self.countErrors += 1
-                else:
-                    sys.stdout.write("Thread % 2d: %s\n" % (id, i))
-
-        except StopIteration:
-            pass
-        finally:
-            self.threadsFinished += 1
+            # check bitrate/filetype etc., skip if conversion not necessary
+            if not self.check(path) or self.dry_run:
+                return
+            print("Converting: {}".format(path))
+            convert(path, self.outputExtension, self.bitrate, self.deleteAfter)
+        except ConversionError as e:
+            msg = "ERROR: failed to convert file '{}'".format(path)
+            if self.verbose > 0:
+                msg += "\n" + e.message
+            print(msg, file=sys.stderr)
+            self.countErrors += 1
+        except GettingBitrateError as e:
+            msg = "ERROR: failed to get bitrate from file '{}'".format(path)
+            if self.verbose > 0:
+                msg += "\n" + e.message
+            print(msg, file=sys.stderr)
+            self.countErrors += 1
+        else:
+            print("Done: {}".format(path))
 
     def queue_generator(self):
         """ For each directory in self.files returns generator returning full paths to mp3 files in that folder.
@@ -215,4 +187,4 @@ if __name__ == "__main__":
 
     tmp = TempFiles()
     main = Main(args)
-    main.run()
+    asyncio.run(main.run())

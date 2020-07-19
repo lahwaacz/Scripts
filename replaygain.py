@@ -1,11 +1,11 @@
 #! /usr/bin/env python3
 
-import sys 
+import sys
 import os
 import argparse
 import subprocess
-import threading
-from time import sleep
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
 
 import taglib
 
@@ -45,7 +45,7 @@ class ReplayGain:
         """
         for fname in self.files:
             # open id3 tag
-            f = taglib.File(fname) 
+            f = taglib.File(fname)
 
             tags = set([tag.lower() for tag in f.tags.keys() if tag.lower().startswith("replaygain_")])
             return tags == set(["replaygain_track_gain", "replaygain_album_gain", "replaygain_track_peak", "replaygain_album_peak"])
@@ -87,7 +87,7 @@ class ReplayGain:
 
         a_gain = float(album_parts[2])              # album gain
         a_peak = float(album_parts[3]) / 32768.0    # album peak
-        
+
         del self.raw_lines[0]   # header
         del self.raw_lines[-1]  # album summary
         for line in self.raw_lines:
@@ -95,7 +95,7 @@ class ReplayGain:
             fname = parts[0]    # filename
 
             self.log.filename = fname
-            self.log.debug("begin processing file") 
+            self.log.debug("begin processing file")
 
             t_gain = float(parts[2])                # track gain
             t_peak = float(parts[3]) / 32768.0      # track peak
@@ -118,28 +118,11 @@ class ReplayGain:
             f.tags["REPLAYGAIN_ALBUM_PEAK"] = "%.6f" % a_peak
 
             # save tag
-            self.log.debug("saving modified ID3 tag") 
-            f.save() 
+            self.log.debug("saving modified ID3 tag")
+            f.save()
 
-            self.log.debug("done processing file") 
-            self.log.filename = None 
-
-
-# thread-safe iterating over generators
-class LockedIterator(object):
-    def __init__(self, it):
-        self.lock = threading.Lock()
-        self.it = it.__iter__()
-
-    def __iter__(self):
-        return self
-
-    def __next__(self):
-        self.lock.acquire()
-        try:
-            return next(self.it)
-        finally:
-            self.lock.release()
+            self.log.debug("done processing file")
+            self.log.filename = None
 
 
 class Main:
@@ -154,47 +137,38 @@ class Main:
         del options.recursive   # don't want to pass it to ReplayGain object
         del options.files   # don't want to pass it to ReplayGain object
 
-        self.threads = cores_count()
+    async def run(self):
+        # We could use the default single-threaded executor with basically the same performance
+        # (because of Python's GIL), but the ThreadPoolExecutor allows to limit the maximum number
+        # of workers and thus the maximum number of concurrent subprocesses.
+        with ThreadPoolExecutor(max_workers=cores_count()) as executor:
+            loop = asyncio.get_event_loop()
+            tasks = [
+                loop.run_in_executor(executor, self.worker, path)
+                for path in self.queue_generator()
+            ]
+            for result in await asyncio.gather(*tasks):
+                pass
 
-        self.killed = threading.Event()
-        self.threadsFinished = 0
-        self.queue = LockedIterator(self.queue_generator())
+    def worker(self, paths):
+        paths = sorted(list(paths))
 
-    def run(self):
-        for i in range(self.threads):
-            t = threading.Thread(target=self.worker, args=(i + 1,))
-            t.start()
+        # skip dirs not containing any mp3 file
+        if len(paths) == 0:
+            return
+
+        # write info
+        print("Procesing:")
+        for path in paths:
+            print("  " + path)
 
         try:
-            while self.threadsFinished < self.threads:
-                sleep(0.5)
-        except (KeyboardInterrupt, SystemExit):
-            self.killed.set()
-
-    def worker(self, id):
-        try:
-            while not self.killed.is_set():
-                i = next(self.queue)
-                i = sorted(list(i))
-
-                # skip dirs not containing any mp3 file
-                if len(i) == 0:
-                    continue
-
-                # write info
-                sys.stdout.write("Thread %d:\n  %s\n\n" % (id, "\n  ".join(i)))
-
-                try:
-                    # create ReplayGain object, pass files and run
-                    rg = ReplayGain(self.logger, self.options, i)
-                    rg.run()
-                except Exception as e:
-                    print(e)
-                    raise
-        except StopIteration:
-            pass
-        finally:
-            self.threadsFinished += 1
+            # create ReplayGain object, pass files and run
+            rg = ReplayGain(self.logger, self.options, paths)
+            rg.run()
+        except Exception as e:
+            print(e, file=sys.stderr)
+            raise
 
     def queue_generator(self):
         """ For each directory in self.files returns generator returning full paths to mp3 files in that folder.
@@ -225,12 +199,12 @@ class Main:
             else:
                 yield [path]
 
-def main(prog_name, options): 
-    logger = Logger(options.log_level, prog_name) 
+def main(prog_name, options):
+    logger = Logger(options.log_level, prog_name)
     logger.debug("Selected mp3 files:")
     logger.debug("\n".join(sorted(options.files)))
-    main = Main(logger, options) 
-    main.run()
+    main = Main(logger, options)
+    asyncio.run(main.run())
 
 def argparse_path_handler(path):
     if not os.path.exists(path):
@@ -240,17 +214,17 @@ def argparse_path_handler(path):
     return os.path.abspath(path)
 
 
-if __name__ == "__main__": 
-    parser = argparse.ArgumentParser(description="Write correct ReplayGain tags into mp3 files; uses mp3gain internally") 
- 
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Write correct ReplayGain tags into mp3 files; uses mp3gain internally")
+
     # log level options
     log = parser.add_mutually_exclusive_group()
-    log.add_argument("-q", "--quiet", dest="log_level", action="store_const", const=0, default=1, help="do not output error messages") 
-    log.add_argument("-v", "--verbose", dest="log_level", action="store_const", const=3, help="output warnings and informational messages") 
-    log.add_argument("-d", "--debug", dest="log_level", action="store_const", const=4, help="output debug messages") 
- 
+    log.add_argument("-q", "--quiet", dest="log_level", action="store_const", const=0, default=1, help="do not output error messages")
+    log.add_argument("-v", "--verbose", dest="log_level", action="store_const", const=3, help="output warnings and informational messages")
+    log.add_argument("-d", "--debug", dest="log_level", action="store_const", const=4, help="output debug messages")
+
     parser.add_argument("-r", "--recursive", action="store_true", help="when path to directory is specified, browse it recursively (albums still respected)")
-    parser.add_argument("--force", action="store_true", help="force overwriting of existing ID3v2 ReplayGain tags") 
+    parser.add_argument("--force", action="store_true", help="force overwriting of existing ID3v2 ReplayGain tags")
     group = parser.add_mutually_exclusive_group()
     group.add_argument("--force-album", action="store_true", help="write replaygain_album_{gain,peak} values into replaygain_track_{gain,peak} tags")
     group.add_argument("--force-track", action="store_true", help="write replaygain_track_{gain,peak} values into replaygain_album_{gain,peak} tags")
@@ -258,4 +232,4 @@ if __name__ == "__main__":
     parser.add_argument("files", nargs="+", metavar="FILE | FOLDER", type=argparse_path_handler, help="path to mp3 file(s) or directory(ies)")
 
     args = parser.parse_args()
-    main(sys.argv[0], args) 
+    main(sys.argv[0], args)
