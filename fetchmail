@@ -30,7 +30,7 @@ fdm -f "$MAILDIR/fdm.conf" fetch
 count-unread-mails.sh
 
 # synchronize with jlk.fjfi.cvut.cz
-if [[ $(hostname) != *".fjfi.cvut.cz" ]]; then
+if [[ $(uname -n) != *".fjfi.cvut.cz" ]]; then
     echo "Synchronizing maildir with jlk.fjfi.cvut.cz"
     unison maildir -batch -silent -log=false
 fi
