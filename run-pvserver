@@ -7,7 +7,7 @@ if [[ "$host" == "" ]]; then
     exit 1
 fi
 
-hostname=$(ssh "$host" "hostname")
+hostname=$(ssh "$host" "uname -n")
 port=11111
 
 if [[ "$hostname" == "teslon" ]]; then
