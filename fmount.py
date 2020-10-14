@@ -38,10 +38,7 @@ def mount(name, mountpath, config):
 
     print("Mounting at '{}'...".format(mountpoint))
     # the mountpoint might exist after an error or automatic unmount
-    try:
-        os.makedirs(mountpoint)
-    except FileExistsError:
-        pass
+    os.makedirs(mountpoint, exist_ok=True)
     subprocess.run(cmd, check=True)
 
 def umount(mntpoint):
