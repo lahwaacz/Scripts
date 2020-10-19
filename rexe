@@ -5,6 +5,7 @@ set -e
 HOST=""
 LOCAL_PATH=""
 REMOTE_PATH=""
+REXE_DIR="rexe"
 CMD=""
 DOWNLOAD="true"
 EXCLUDE=()
@@ -61,11 +62,13 @@ fi
 if [[ "$LOCAL_PATH" == "" ]]; then
     LOCAL_PATH=$(pwd)
 fi
-if [[ "$REMOTE_PATH" == "" ]]; then
-    REMOTE_PATH=$(ssh "$HOST" echo '$XDG_RUNTIME_DIR')
-fi
+# NOTE: the tmpfs for $XDG_RUNTIME_DIR may be too small (e.g. only 10% of the available RAM)
+#if [[ "$REMOTE_PATH" == "" ]]; then
+#    REMOTE_PATH=$(ssh "$HOST" echo '$XDG_RUNTIME_DIR')
+#fi
 if [[ "$REMOTE_PATH" == "" ]]; then
     REMOTE_PATH="/tmp"
+    REXE_DIR="rexe_$(ssh "$HOST" whoami)"
 fi
 
 if [[ ! -d "$LOCAL_PATH" ]]; then
@@ -75,7 +78,7 @@ fi
 
 # change remote path into full path
 _basename=$(basename "$LOCAL_PATH")
-REMOTE_PATH="$REMOTE_PATH/rexe/$_basename"
+REMOTE_PATH="$REMOTE_PATH/$REXE_DIR/$_basename"
 
 # create remote directory
 echo "Creating remote directory '$REMOTE_PATH'..."
