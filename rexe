@@ -76,13 +76,13 @@ if [[ ! -d "$LOCAL_PATH" ]]; then
     exit 1
 fi
 
+# create remote main directory for rexe with restricted permissions
+echo "Creating remote directory '$REMOTE_PATH/$REXE_DIR'..."
+ssh "$HOST" mkdir -m 0700 -p "$REMOTE_PATH/$REXE_DIR"
+
 # change remote path into full path
 _basename=$(basename "$LOCAL_PATH")
 REMOTE_PATH="$REMOTE_PATH/$REXE_DIR/$_basename"
-
-# create remote directory
-echo "Creating remote directory '$REMOTE_PATH'..."
-ssh "$HOST" mkdir -p "$REMOTE_PATH"
 
 echo "Uploading local directory '$LOCAL_PATH' to remote directory '$REMOTE_PATH'..."
 rsync -rlptD "$LOCAL_PATH/" "$HOST:$REMOTE_PATH/" -e ssh -zz --info=progress2 --delete ${EXCLUDE[@]}
