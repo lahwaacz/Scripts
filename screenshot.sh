@@ -20,7 +20,7 @@ screenshot() {
             fi
             grim -g "$geometry" $(date +"$filename")
         else
-            scrot -s $filename
+            scrot -s "$filename"
         fi
         notify-send "Taken screenshot:" $(date +$(basename $filename))
         ;;
