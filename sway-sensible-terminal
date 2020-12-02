@@ -20,7 +20,14 @@ def get_cwd(tree):
         if cwd is not None:
             return cwd
 
-cmd = subprocess.run("swaymsg -t get_tree", shell=True, check=True, capture_output=True)
+if os.path.isfile("/usr/bin/swaymsg"):
+    prog = "swaymsg"
+elif os.path.isfile("/usr/bin/i3-msg"):
+    prog = "i3-msg"
+else:
+    raise Exception("Neither swaymsg or i3-msg was found in /usr/bin/")
+
+cmd = subprocess.run(f"{prog} -t get_tree", shell=True, check=True, capture_output=True)
 tree = json.loads(cmd.stdout)
 cwd = get_cwd(tree)
 if cwd is not None:
@@ -33,4 +40,4 @@ for d in PATH.split(":"):
 
     os.execl(path, path, *ARGS)
 
-raise Exception("Error: terminal '{}' was not found in $PATH ({})".format(TERMINAL, PATH))
+raise Exception(f"Error: terminal '{TERMINAL}' was not found in $PATH ({PATH})")
