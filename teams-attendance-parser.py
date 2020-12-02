@@ -10,6 +10,7 @@ this stuff is worth it, you can buy me a beer in return.
 import argparse
 import os.path
 import datetime
+import sys
 
 # maybe depends on the locale in which MS Teams runs...
 TIMESTAMP_FORMAT = "%m/%d/%Y, %I:%M:%S %p"
