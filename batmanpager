@@ -1,0 +1,4 @@
+#!/bin/sh
+
+# https://github.com/sharkdp/bat/issues/1145
+col -bx < "$1" | bat --language man --style plain
