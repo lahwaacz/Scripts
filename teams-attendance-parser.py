@@ -13,12 +13,22 @@ import datetime
 import sys
 
 # maybe depends on the locale in which MS Teams runs...
-TIMESTAMP_FORMAT = "%m/%d/%Y, %I:%M:%S %p"
+TIMESTAMP_FORMATS = [
+    "%m/%d/%Y, %I:%M:%S %p",
+    "%d. %m. %Y %H:%M:%S",
+]
 
 CLASS_LENGTH = datetime.timedelta(minutes=100)
 
 def parse_timestamp(timestamp):
-    return datetime.datetime.strptime(timestamp, TIMESTAMP_FORMAT)
+    last_error = None
+    for format in TIMESTAMP_FORMATS:
+        try:
+            return datetime.datetime.strptime(timestamp, format)
+        except ValueError as e:
+            last_error = e
+            continue
+    raise last_error
 
 def parse_attendance_list(path):
     print(f"Parsing file {path}...")
@@ -29,12 +39,12 @@ def parse_attendance_list(path):
         # parse items on the line
         name, action, timestamp = line.split("\t")
         # skip header line
-        if name == "Full Name":
+        if name == "Full Name" or name == "Celé jméno":
             continue
 
         # validate items
         assert "," in name, name
-        assert action in {"Joined", "Left"}, f"unknown action: {action}"
+        assert action in {"Joined", "Left", "Připojeno", "Odpojil(a) se"}, f"unknown action: {action}"
         timestamp = parse_timestamp(timestamp)
 
         # initialize data
@@ -56,10 +66,10 @@ def get_attendance(class_start, actions):
     joined = None
     for i, item in enumerate(actions):
         action, timestamp = item
-        if action == "Joined":
+        if action in {"Joined", "Připojeno"}:
             assert joined is None
             joined = timestamp
-        elif action == "Left":
+        elif action in {"Left", "Odpojil(a) se"}:
             assert joined is not None
             attendance += timestamp - joined
             joined = None
