@@ -6,7 +6,7 @@ import json
 import subprocess
 
 PATH = os.environ.get("PATH", "/usr/bin")
-TERMINAL = os.environ.get("TERMINAL", "tinyterm")
+TERMINAL = os.environ.get("TERMINAL", "alacritty")
 ARGS = sys.argv[1:]
 
 def get_cwd(tree):
@@ -31,7 +31,10 @@ cmd = subprocess.run(f"{prog} -t get_tree", shell=True, check=True, capture_outp
 tree = json.loads(cmd.stdout)
 cwd = get_cwd(tree)
 if cwd is not None:
-    ARGS = ["-d", cwd, *ARGS]
+    if "alacritty" in TERMINAL:
+        ARGS = ["--working-directory", cwd, *ARGS]
+    else:
+        ARGS = ["-d", cwd, *ARGS]
 
 for d in PATH.split(":"):
     path = os.path.join(d, TERMINAL)
