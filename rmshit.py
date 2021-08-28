@@ -53,6 +53,7 @@ shittyfiles = [
     '~/.ansible/',
     '~/.fltk/',
     '~/.vnc/',
+    '~/.mozilla/',
 ]
 
 
