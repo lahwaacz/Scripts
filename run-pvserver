@@ -10,11 +10,9 @@ fi
 hostname=$(ssh "$host" "uname -n")
 port=11111
 
+# NOTE: bash -lc is needed to get full $PATH by sourcing /etc/profile.d/*.sh
 if [[ "$hostname" == "teslon" ]]; then
-    ssh -C -t -L "localhost:11111:$hostname:$port" "$host" "bash -lc 'module load mpi/openmpi3-x86_64 paraview/5.7.0 && mpirun -np 4 pvserver -display :0 --server-port=$port'"
-#elif [[ "$hostname" == "gp2.fjfi.cvut.cz" ]]; then
-#    ssh -C -t -L "localhost:11111:$hostname:$port" "$host" "bash -lc 'module load ParaView/5.6.1-osmesa-bin && mpiexec -np 4 pvserver -display :0 --server-port=$port'"
+    ssh -C -t -L "localhost:$port:$hostname:$port" "$host" "bash -lc 'module load mpi/openmpi3-x86_64 paraview/5.7.0 && mpirun -np 4 pvserver -display :0 --server-port=$port'"
 else
-    # NOTE: bash -lc is needed to get full $PATH by sourcing /etc/profile.d/*.sh
     ssh -C -t -L "localhost:$port:$hostname:$port" "$host" "bash -lc 'mpirun -np 2 pvserver -display :0 --server-port=$port'"
 fi
