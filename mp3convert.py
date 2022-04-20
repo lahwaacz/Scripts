@@ -44,7 +44,7 @@ def convert(filename, output_extension, bitrate, delete_after=False):
     tmpfile = tmp.getTempFileName()
     command = ffmpeg_command.format(input=shlex.quote(filename), bitrate=bitrate, output=shlex.quote(tmpfile))
     try:
-        subprocess.check_output(command, shell=True, stderr=subprocess.STDOUT, universal_newlines=True)
+        subprocess.run(command, shell=True, check=True, capture_output=True)
         if delete_after:
             os.remove(filename)
         shutil.move(tmpfile, os.path.splitext(filename)[0] + output_extension)
