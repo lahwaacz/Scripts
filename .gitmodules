@@ -1,0 +1,3 @@
+[submodule "submodules/cp-p"]
+	path = submodules/cp-p
+	url = ../cp-p.git
