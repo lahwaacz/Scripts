@@ -38,6 +38,7 @@ shittyfiles = [
     '~/.swt/',
     '~/.oracle_jre_usage/',
     '~/.openjfx/',
+    '~/.org.jabref.gui.JabRefMain/',
     '~/.jssc/',
     '~/.tox/',              # cache directory for tox
     '~/.pylint.d/',
