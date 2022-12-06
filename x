@@ -69,7 +69,7 @@ function extract() {
         count=$(find "$basename" -maxdepth 1 -mindepth 1 | wc -l)
 
         if [[ $count == 1 ]]; then
-            name=$(basename $(find "$basename" -maxdepth 1 -mindepth 1))
+            name=$(basename "$(find "$basename" -maxdepth 1 -mindepth 1)")
 
             # can't move ./foo/foo into ./foo
             if [[ "$basename" == "$name" ]]; then
