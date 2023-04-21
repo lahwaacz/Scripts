@@ -25,11 +25,7 @@ function fetchmail()
         ssh geraldine 'rm $HOME/mbox'
     fi
 
-    count-unread-mails.sh
-
     fdm -f "$MAILDIR/fdm.conf" fetch
-
-    count-unread-mails.sh
 
     # synchronize with jlk.fjfi.cvut.cz
     if [[ $(uname -n) != *".fjfi.cvut.cz" ]]; then
