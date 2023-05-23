@@ -58,6 +58,7 @@ shittyfiles = [
     '~/.fltk/',
     '~/.vnc/',
     '~/.mozilla/',
+    '~/.local/share/Trash/',    # VSCode puts deleted files here
 ]
 
 
