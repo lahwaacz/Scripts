@@ -6,7 +6,7 @@ source "/usr/share/makepkg/util/message.sh"
 colorize
 
 # all local packages which are not in the official repositories
-targets=( $(comm -23 <(pacman -Qq | sort) <(pacman -Slq core extra community | sort)) )
+targets=( $(comm -23 <(pacman -Qq | sort) <(pacman -Slq core extra | sort)) )
 
 msg "Checking versions of local packages..."
 
