@@ -40,7 +40,7 @@ if [[ "$1" == "loop" ]]; then
 
     while true; do
         fetchmail
-        sleep 1m
+        sleep 2m
     done
 else
     fetchmail
