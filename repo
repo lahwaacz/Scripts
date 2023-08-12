@@ -1,0 +1,192 @@
+#! /usr/bin/env python
+
+import argparse
+from pathlib import Path
+import re
+import subprocess
+import tomlkit.toml_file
+
+from pyalpm import vercmp
+
+PKGNAME_REGEX = re.compile("^(?P<pkgname>[a-z0-9@._+-]+)-(?P<pkgver>[a-z0-9._:+]+)-(?P<pkgrel>[a-z0-9._:+]+)-(?P<arch>any|x86_64|i686)\.pkg\.tar(\.xz|\.zst)?$", re.IGNORECASE)
+
+REPO_DIR = Path("~/build/pkgs/").expanduser()
+DB_NAME = "jlk.db.tar.xz"
+SOURCE_DIRS = [
+    {
+        "path": Path("~/build/aur/").expanduser(),
+        "nvchecker_source": "aur",
+    },
+    {
+        "path": Path("~/build/aur_mine/").expanduser(),
+        "nvchecker_overwrite": False,
+        "nvchecker_source": "aur",
+    },
+    {
+        "path": Path("~/build/core+extra/").expanduser(),
+        "nvchecker_overwrite": False,
+        "nvchecker_source": "archpkg",
+#        "nvchecker_source": "gitlab",
+#        "nvchecker_host": "gitlab.archlinux.org",
+#        "nvchecker_gitlab_format": "archlinux/packaging/packages/{remote_pkgname}"
+    },
+]
+NVCHECKER_CONFIG_FILE = Path("~/.config/nvchecker/nvchecker.toml").expanduser()
+
+assert REPO_DIR.is_dir()
+assert (REPO_DIR / DB_NAME).is_file()
+for d in SOURCE_DIRS:
+    assert d["path"].is_dir(), d["path"]
+
+def repo_add_new():
+    """ Runs ``repo-add`` for all newly built packages that are not yet in the database.
+    """
+    current_packages = {}
+    old_pkgnames = set()
+    old_files = set()
+
+    # remove files that don't match pkgname_reges from further processing!!
+    for f in REPO_DIR.iterdir():
+        if not f.is_file():
+            continue
+        match = re.match(PKGNAME_REGEX, f.name)
+        if match:
+            pkgname = match.groupdict()["pkgname"]
+            pkgver = match.groupdict()["pkgver"]
+            pkgrel = match.groupdict()["pkgrel"]
+
+            data = match.groupdict()
+            data["fname"] = f
+            current_packages.setdefault(pkgname, data)
+
+            cur_pkgver = current_packages[pkgname]["pkgver"]
+            cur_pkgrel = current_packages[pkgname]["pkgrel"]
+            comp = vercmp(pkgver + "-" + pkgrel, cur_pkgver + "-" + cur_pkgrel)
+            if comp < 0:
+                old_pkgnames.add(pkgname)
+                old_files.add(f)
+            elif comp > 0:
+                current_data = current_packages[pkgname]
+                old_pkgnames.add(current_data["pkgname"])
+                old_files.add(current_data["fname"])
+                current_packages[pkgname] = data
+
+    # update database entries
+    to_update = set()
+    for pkgname, data in current_packages.items():
+        if pkgname in old_pkgnames:
+            to_update.add(data["fname"])
+    if to_update:
+        cmd = ["repo-add", "-n", "-s", DB_NAME, *sorted(to_update)]
+        subprocess.run(cmd, check=True, cwd=REPO_DIR)
+
+    return old_files
+
+def update():
+    old_files = repo_add_new()
+
+    # remove old files
+    for f in sorted(old_files):
+        print(f"Deleted: {f}")
+        f.unlink()
+        sig = f.with_suffix(f.suffix + ".sig")
+        if sig.is_file():
+            print(f"Deleted: {sig}")
+            sig.unlink()
+
+    # TODO: push modified sources to my gitlab repository
+
+def get_from_SRCINFO(path, key):
+    with open(path, "r") as f:
+        for line in f.readlines():
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            k, v = line.split("=", 1)
+            if k.strip() == key:
+                return v.strip()
+
+def get_from_PKGBUILD(path, key):
+    with open(path, "r") as f:
+        for line in f.readlines():
+            if line.startswith(f"{key}="):
+                value = line.split("=", 1)[1].strip()
+                if value.startswith("'") and value.endswith("'"):
+                    value = value[1:-1]
+                if value.startswith('"') and value.endswith('"'):
+                    value = value[1:-1]
+                return value
+
+def nvchecker():
+    """ Updates ``nvchecker`` config file with the sources defined in ``SOURCE_DIRS``
+        and then runs ``nvchecker``.
+    """
+    for src in SOURCE_DIRS:
+        root_path = src["path"]
+
+        # read the config file
+        config_file = tomlkit.toml_file.TOMLFile(NVCHECKER_CONFIG_FILE)
+        config = config_file.read()
+
+        # iterate over package directories in the source root
+        for pkg in root_path.iterdir():
+            if not pkg.is_dir():
+                continue
+            elif not (pkg / "PKGBUILD").is_file():
+                print(f"WARNING: PKGBUILD not found in {pkg}")
+                continue
+
+            # extract from .SRCINFO if it exists
+            if (pkg / ".SRCINFO").is_file():
+                pkgname = get_from_SRCINFO(pkg / ".SRCINFO", "pkgname")
+                pkgver = get_from_SRCINFO(pkg / ".SRCINFO", "pkgver")
+            else:
+                # extract pkgname and pkgver from PKGBUILD in the most hackish way
+                pkgname = pkg.name
+                #pkgname = get_from_PKGBUILD(pkg / "PKGBUILD", "pkgname")
+                pkgver = get_from_PKGBUILD(pkg / "PKGBUILD", "pkgver")
+
+
+            # ensure that a TOML table for the pkgname exists
+            if pkgname not in config:
+                config.add(pkgname, tomlkit.table())
+                update_config = True
+            else:
+                update_config = src.get("nvchecker_overwrite", True)
+
+            # update the config file
+            if update_config:
+                source = src["nvchecker_source"]
+                config[pkgname]["source"] = source
+                if source in {"aur", "archpkg"}:
+                    config[pkgname][source] = pkgname
+                elif source == "gitlab":
+                    config[pkgname]["host"] = src["nvchecker_host"]
+                    config[pkgname]["gitlab"] = src["nvchecker_gitlab_format"].format(remote_pkgname=pkgname)
+
+        # write the config file
+        config_file.write(config)
+
+    # run nvchecker
+    subprocess.run(["nvchecker", "-c", NVCHECKER_CONFIG_FILE], check=True)
+
+def check():
+    nvchecker()
+
+    # TODO: check if rebuild-notify and expac are available
+    subprocess.run(["rebuild-notify"], check=True)
+
+    # TODO: list packages that are in the database, but package file is deleted or source is missing
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    subparsers = parser.add_subparsers(title="subcommands", help="valid subcommands", required=True, dest="subcommand")
+    parser_update = subparsers.add_parser("update", help="add newly built packages to the repo database, remove old package files")
+    parser_check = subparsers.add_parser("check", help="check the repo for problems and new package versions")
+    # TODO: implement "repo add" and "repo remove" (with -f to also delete the package file), handle both pkgname and pkg file path
+
+    args = parser.parse_args()
+    if args.subcommand == "update":
+        update()
+    elif args.subcommand == "check":
+        check()
