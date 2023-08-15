@@ -178,15 +178,94 @@ def check():
 
     # TODO: list packages that are in the database, but package file is deleted or source is missing
 
+def remove(targets, *, force=False):
+    packages = {}
+
+    for target in targets:
+        # first check if the target is a valid path
+        path = Path(target)
+        if path.is_file():
+            # check if the file is in REPO_DIR
+            if path.parent.resolve() != REPO_DIR.resolve():
+                raise Exception(f"The file {target} is not located in the repo directory {REPO_DIR}.")
+
+            # then check if the path is a package
+            match = re.match(PKGNAME_REGEX, path.name)
+            if match:
+                pkgname = match.groupdict()["pkgname"]
+                pkgver = match.groupdict()["pkgver"]
+                pkgrel = match.groupdict()["pkgrel"]
+                pkgdata = packages.setdefault(pkgname, [])
+                pkgdata.append({"pkgname": pkgname, "pkgver": pkgver, "pkgrel": pkgrel, "path": path})
+            else:
+                raise Exception(f"Package {target} was specified as file path, but it does not match the package name regex.")
+
+        else:
+            # if not a path, find all files matching the pkgname in the REPO_DIR
+            files = list(REPO_DIR.glob(target + "*.pkg.tar.*"))
+
+            # make sure that a valid pkgname gets removed, even if the package was already deleted from disk
+            if not files:
+                print(f"WARNING: no package file found for {target}")
+                pkgdata = packages.setdefault(target, [])
+                pkgdata.append({"pkgname": target, "pkgver": None, "pkgrel": None, "path": None})
+                continue
+
+            # check all found files
+            for file in files:
+                match = re.match(PKGNAME_REGEX, file.name)
+                if match:
+                    pkgname = match.groupdict()["pkgname"]
+                    # skip packages that did not match exactly (i.e. target is a prefix of pkgname)
+                    if pkgname != target:
+                        continue
+                    pkgver = match.groupdict()["pkgver"]
+                    pkgrel = match.groupdict()["pkgrel"]
+                    pkgdata = packages.setdefault(pkgname, [])
+                    pkgdata.append({"pkgname": pkgname, "pkgver": pkgver, "pkgrel": pkgrel, "path": file})
+
+    # call repo-remove
+    pkgnames = sorted(packages.keys())
+    if pkgnames:
+        print(f"Removing packages {pkgnames} from the database...")
+        cmd = ["repo-remove", "-s", DB_NAME, *pkgnames]
+        subprocess.run(cmd, cwd=REPO_DIR)
+    else:
+        print("No package selected, nothing to do.")
+
+    # get all package files
+    pkgfiles = []
+    for data in packages.values():
+        for pkg in data:
+            if pkg["path"] is not None:
+                pkgfiles.append(pkg["path"])
+
+    # delete package files
+    if force is True:
+        for f in sorted(pkgfiles):
+            print(f"Deleted: {f}")
+            f.unlink()
+            sig = f.with_suffix(f.suffix + ".sig")
+            if sig.is_file():
+                print(f"Deleted: {sig}")
+                sig.unlink()
+    elif pkgfiles:
+        print("Package files were left on the disk. Use --force to delete them.")
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers(title="subcommands", help="valid subcommands", required=True, dest="subcommand")
     parser_update = subparsers.add_parser("update", help="add newly built packages to the repo database, remove old package files")
     parser_check = subparsers.add_parser("check", help="check the repo for problems and new package versions")
-    # TODO: implement "repo add" and "repo remove" (with -f to also delete the package file), handle both pkgname and pkg file path
+    # TODO: implement "repo add", handle both pkgname and pkg file path
+    parser_remove = subparsers.add_parser("remove", help="remove package(s) from the repo database")
+    parser_remove.add_argument("-f", "--force", action="store_true", help="also delete the package file(s) from disk")
+    parser_remove.add_argument("pkgname", nargs="+", help="name of the package to remove (can also be a file path)")
 
     args = parser.parse_args()
     if args.subcommand == "update":
         update()
     elif args.subcommand == "check":
         check()
+    elif args.subcommand == "remove":
+        remove(args.pkgname, force=args.force)
