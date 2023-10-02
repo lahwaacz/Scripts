@@ -1,4 +1,6 @@
 #!/bin/sh
 
-# https://github.com/sharkdp/bat/issues/1145
-col -bx < "$1" | bat --language man --style plain --pager "$PAGER"
+# mandoc passes a file name, other tools write to stdout
+# using `cat "$@"` we take care of both reading from file and stdin
+# https://github.com/sharkdp/bat/issues/1145#issuecomment-1743518097
+exec cat "$@" | col -bx | bat --language man --style plain --pager "$PAGER"
