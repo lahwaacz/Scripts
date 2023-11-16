@@ -88,7 +88,10 @@ echo "Uploading local directory '$LOCAL_PATH' to remote directory '$REMOTE_PATH'
 rsync -rlptD "$LOCAL_PATH/" "$HOST:$REMOTE_PATH/" -e ssh -zz --info=progress2 --delete ${EXCLUDE[@]}
 
 echo "Executing remote command '$CMD'..."
-ssh -t "$HOST" "cd $REMOTE_PATH; bash --login -c -- '$CMD'"
+# ignore errors of the ssh command to always run rsync afterwards (even on keyboard interrupt)
+set +e
+ssh -t "$HOST" "cd ${REMOTE_PATH@Q}; bash --login -c -- ${CMD@Q}"
+set -e
 
 if [[ "$DOWNLOAD" != "false" ]]; then
     echo "Synchronizing remote directory '$REMOTE_PATH' into the local directory..."
