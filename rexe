@@ -9,6 +9,7 @@ REXE_DIR="rexe"
 CMD=""
 DOWNLOAD="true"
 EXCLUDE=()
+EXCLUDE_DOWNLOAD=()
 
 function handle_argument()
 {
@@ -39,6 +40,8 @@ while [ "$#" -gt 0 ]; do
             --no-download) DOWNLOAD="false"; shift 1;;
             --exclude=*) EXCLUDE+=("--exclude" "${1#*=}"); shift 1;;
             --exclude) EXCLUDE+=("--exclude" "$2"); shift 2;;
+            --exclude-download=*) EXCLUDE_DOWNLOAD+=("--exclude" "${1#*=}"); shift 1;;
+            --exclude-download) EXCLUDE_DOWNLOAD+=("--exclude" "$2"); shift 2;;
 
             -*) echo "unknown option: $1" >&2; exit 1;;
             *) handle_argument "$1"; shift 1;;
@@ -95,5 +98,7 @@ set -e
 
 if [[ "$DOWNLOAD" != "false" ]]; then
     echo "Synchronizing remote directory '$REMOTE_PATH' into the local directory..."
-    rsync -rlptD "$HOST:$REMOTE_PATH/" "$LOCAL_PATH/" -e ssh -zz --info=progress2 --delete ${EXCLUDE[@]}
+    # FIXME: EXCLUDE_DOWNLOAD does not work correctly for wildcards
+    echo rsync -rlptD "$HOST:$REMOTE_PATH/" "$LOCAL_PATH/" -e ssh -zz --info=progress2 --delete ${EXCLUDE[@]} ${EXCLUDE_DOWNLOAD[@]} -v
+    rsync -rlptD "$HOST:$REMOTE_PATH/" "$LOCAL_PATH/" -e ssh -zz --info=progress2 --delete ${EXCLUDE[@]} ${EXCLUDE_DOWNLOAD[@]} -v
 fi
