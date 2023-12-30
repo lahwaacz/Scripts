@@ -1,6 +1,6 @@
 #!/bin/sh
 
-filename="$HOME/Bbox/shared/screenshot-%Y-%m-%d@%H:%M:%S.png"
+filename="$HOME/stuff/screenshots/screenshot-%Y-%m-%d@%H:%M:%S.png"
 
 screenshot() {
     case $1 in
