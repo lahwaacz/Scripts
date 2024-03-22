@@ -7,10 +7,14 @@ duration=1500
 
 notify () {
     # get volume level
-    percent=$(ponymix get-volume)
+    percent=$(pactl get-sink-volume @DEFAULT_SINK@ | grep -Po '\d+(?=%)' | head -n 1)
 
     # check if muted, set title
-    ponymix is-muted && title="Volume muted" || title="Volume"
+    if [[ $(pactl get-sink-mute @DEFAULT_SINK@) == "Mute: yes" ]]; then
+        title="Volume muted"
+    else
+        title="Volume"
+    fi
 
     # create fancy bar
     f=$((percent/10))
@@ -27,21 +31,21 @@ exec > /dev/null
 
 case "$1" in
     up)
-        ponymix increase 5%
-        ponymix unmute
+        pactl set-sink-volume @DEFAULT_SINK@ +5%
+        pactl set-sink-mute @DEFAULT_SINK@ 0
         ;;
     down)
-        ponymix decrease 5%
-        ponymix unmute
+        pactl set-sink-volume @DEFAULT_SINK@ -5%
+        pactl set-sink-mute @DEFAULT_SINK@ 0
         ;;
     mute)
-        ponymix mute
+        pactl set-sink-mute @DEFAULT_SINK@ 1
         ;;
     unmute)
-        ponymix unmute
+        pactl set-sink-mute @DEFAULT_SINK@ 0
         ;;
     toggle)
-        ponymix toggle
+        pactl set-sink-mute @DEFAULT_SINK@ toggle
         ;;
 esac
 
