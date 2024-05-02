@@ -8,22 +8,22 @@ import tomlkit.toml_file
 
 from pyalpm import vercmp
 
-PKGNAME_REGEX = re.compile("^(?P<pkgname>[a-z0-9@._+-]+)-(?P<pkgver>[a-z0-9._:+]+)-(?P<pkgrel>[a-z0-9._:+]+)-(?P<arch>any|x86_64|i686)\.pkg\.tar(\.xz|\.zst)?$", re.IGNORECASE)
+PKGNAME_REGEX = re.compile(r"^(?P<pkgname>[a-z0-9@._+-]+)-(?P<pkgver>[a-z0-9._:+]+)-(?P<pkgrel>[a-z0-9._:+]+)-(?P<arch>any|x86_64|i686)\.pkg\.tar(\.xz|\.zst)?$", re.IGNORECASE)
 
-REPO_DIR = Path("~/build/pkgs/").expanduser()
+REPO_DIR = Path("~/.cache/archbuild/pkgs/").expanduser()
 DB_NAME = "jlk.db.tar.xz"
 SOURCE_DIRS = [
     {
-        "path": Path("~/build/aur/").expanduser(),
+        "path": Path("~/Bbox/build/aur/").expanduser(),
         "nvchecker_source": "aur",
     },
     {
-        "path": Path("~/build/aur_mine/").expanduser(),
+        "path": Path("~/Bbox/build/aur_mine/").expanduser(),
         "nvchecker_overwrite": False,
         "nvchecker_source": "aur",
     },
     {
-        "path": Path("~/build/core+extra/").expanduser(),
+        "path": Path("~/Bbox/build/core+extra/").expanduser(),
         "nvchecker_overwrite": False,
         "nvchecker_source": "archpkg",
 #        "nvchecker_source": "gitlab",
