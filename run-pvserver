@@ -9,6 +9,7 @@ fi
 
 hostname=$(ssh "$host" "uname -n")
 port=11111
+display=42
 
 # NOTE: bash -lc is needed to get full $PATH by sourcing /etc/profile.d/*.sh
-ssh -C -t -L "localhost:$port:$hostname:$port" "$host" "bash -lc 'mpirun -np 2 pvserver -display :0 --server-port=$port'"
+ssh -C -t -L "localhost:$port:$hostname:$port" "$host" "bash -lc 'xvfb-run --server-num=$display mpirun -np 2 pvserver --displays=:$display --server-port=$port'"
