@@ -11,6 +11,7 @@ import mailbox
 DROP_MIN_SIZE = 256  # KiB
 DROP_CONTENT_TYPES = [
     "image/",
+    "video/",
     "application/pdf",
     "application/x-extension-pdf",
     "application/zip",
@@ -19,10 +20,12 @@ DROP_CONTENT_TYPES = [
     "application/x-xz",
     "application/x-7z-compressed",
     "application/x-zip-compressed",
+    "application/x-rar-compressed",
     "application/x-msdownload",
     "application/msword",
     "application/vnd.ms-excel",
     "application/vnd.ms-powerpoint",
+    "application/vnd.ms-xpsdocument",
     "application/octet-stream",
 ]
 
