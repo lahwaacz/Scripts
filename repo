@@ -14,21 +14,13 @@ REPO_DIR = Path("~/.cache/archbuild/pkgs/").expanduser()
 DB_NAME = "jlk.db.tar.xz"
 SOURCE_DIRS = [
     {
-        "path": Path("~/Bbox/build/aur/").expanduser(),
+        "path": Path("~/Arch/packaging/aur/").expanduser(),
         "nvchecker_source": "aur",
     },
     {
-        "path": Path("~/Bbox/build/aur_mine/").expanduser(),
+        "path": Path("~/Arch/packaging/aur_mine/").expanduser(),
         "nvchecker_overwrite": False,
         "nvchecker_source": "aur",
-    },
-    {
-        "path": Path("~/Bbox/build/core+extra/").expanduser(),
-        "nvchecker_overwrite": False,
-        "nvchecker_source": "archpkg",
-#        "nvchecker_source": "gitlab",
-#        "nvchecker_host": "gitlab.archlinux.org",
-#        "nvchecker_gitlab_format": "archlinux/packaging/packages/{remote_pkgname}"
     },
 ]
 NVCHECKER_CONFIG_FILE = Path("~/.config/nvchecker/nvchecker.toml").expanduser()
