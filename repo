@@ -165,8 +165,9 @@ def nvchecker():
 def check():
     nvchecker()
 
-    # TODO: check if rebuild-notify and expac are available
-    subprocess.run(["rebuild-notify"], check=True)
+    # TODO: check if rebuild-detector is installed
+    print("Checking packages that need to be rebuilt...")
+    subprocess.run(["checkrebuild", "-i", "jlk"], check=True)
 
     # TODO: list packages that are in the database, but package file is deleted or source is missing
 
