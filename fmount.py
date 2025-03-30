@@ -20,7 +20,7 @@ def reformat_mntopts(mntopts):
     return ",".join(set(options))
 
 
-def mount_gio(*, scheme, host, path, user, port, mountpoint: Path):
+def mount_gio(*, scheme: str, host: str, path: str, user: str, port: str, mountpoint: Path):
     if mountpoint.exists() and not mountpoint.is_symlink():
         print(f"Error: path {mountpoint} exists but is not a symlink", file=sys.stderr)
         return
@@ -59,20 +59,20 @@ def mount_gio(*, scheme, host, path, user, port, mountpoint: Path):
 
     # hack for inaccessible parents of the path on smb servers
     if scheme == "smb":
-        path = Path(path.lstrip("/"))
+        _path = Path(path.lstrip("/"))
         # the first part is the remote share, the rest is the location we want
-        target /= path.relative_to(path.parts[0])
+        target /= _path.relative_to(_path.parts[0])
 
     # create a symlink from mountpoint to gvfs target
     mountpoint.symlink_to(target)
 
 
-def mount_sshfs(*, host, path, user, port, mountpoint: Path, mntopts: str):
+def mount_sshfs(*, host: str, path: str, user: str, port: str, mountpoint: Path, mntopts: str):
     uhd = host + ":" + path
     if user:
         uhd = user + "@" + uhd
 
-    cmd = ["sshfs", uhd, mountpoint]
+    cmd = ["sshfs", uhd, str(mountpoint)]
     if mntopts:
         cmd += ["-o", mntopts]
     if port:
@@ -117,12 +117,12 @@ def mount(name, mountpath: Path, config):
 
 def umount(mntpoint: Path):
     if path.is_mount():
-        cmd = ["fusermount3", "-u", mntpoint]
+        cmd = ["fusermount3", "-u", str(mntpoint)]
         subprocess.run(cmd, check=True)
         clean(mntpoint)
     elif path.is_symlink():
         if path.readlink().exists():
-            cmd = ["gio", "mount", "--unmount", mntpoint.resolve()]
+            cmd = ["gio", "mount", "--unmount", str(mntpoint.resolve())]
             subprocess.run(cmd, check=True)
         # do not call clean(path), gio takes a while to remove the target
         path.unlink()
