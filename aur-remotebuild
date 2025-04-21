@@ -1,0 +1,190 @@
+#!/bin/bash
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+# aur-remotebuild - build packages remotely using aur-chroot
+# (partly based on offload-build from devtools)
+set -o errexit
+shopt -s nullglob
+readonly argv0=remotebuild
+
+if [[ ! -f PKGBUILD ]]; then
+    echo "No PKGBUILD in the current directory!" >&2
+    exit 1
+fi
+
+# default arguments
+repo_name=lahwaacz
+chroot_args=(
+    --create
+    --update
+    --build
+    # makechrootpkg options
+    --checkpkg
+    --namcap
+)
+
+usage() {
+    printf >&2 'Usage: %s HOSTNAME [--repo NAME] [--inspect never|always|failure] [--] <aur-chroot args>\n' "$argv0"
+    exit 1
+}
+
+server="$1"
+shift
+if [[ "$server" == "" ]]; then
+    usage
+fi
+
+source /usr/share/makepkg/util/parseopts.sh
+
+## option parsing
+opt_short='d:'
+opt_long=('inspect:')
+opt_hidden=()
+
+if ! parseopts "$opt_short" "${opt_long[@]}" "${opt_hidden[@]}" -- "$@"; then
+    usage
+fi
+set -- "${OPTRET[@]}"
+
+while true; do
+    case "$1" in
+        --repo)
+            shift;
+            repo_name=$1
+            ;;
+        --inspect)
+            shift;
+            chroot_args+=(--makechrootpkg-args="-x,$1")
+            ;;
+        --)
+            shift;
+            break
+            ;;
+    esac
+    shift
+done
+
+# pass db name to aur-chroot
+chroot_args+=(
+    --pacman-conf "/etc/aurutils/pacman-$repo_name.conf"
+    --makepkg-conf "/etc/aurutils/makepkg-$repo_name.conf"
+)
+
+# pass remaining arguments to aur-chroot
+if (($#)); then
+    chroot_args+=("$@")
+fi
+
+
+# aur chroot command to run remotely
+aur_chroot_cmd=(
+    env
+    # aur-chroot does not preserve SRCDEST and LOGDEST by default https://github.com/aurutils/aurutils/issues/1196
+    AUR_PACMAN_AUTH="sudo --preserve-env=GNUPGHOME,SSH_AUTH_SOCK,SRCDEST,PKGDEST,LOGDEST"
+    SRCDEST=""
+    PKGDEST=""
+    LOGDEST=""
+    aur
+    chroot
+    "${chroot_args[@]}"
+)
+
+
+### offload-build-like part
+source /usr/share/devtools/lib/common.sh
+source /usr/share/devtools/lib/util/makepkg.sh
+source /usr/share/devtools/lib/util/srcinfo.sh
+source /usr/share/makepkg/util/config.sh
+
+[[ -z ${WORKDIR:-} ]] && setup_workdir
+TEMPDIR=$(mktemp --tmpdir="${WORKDIR}" --directory aur-remotebuild.XXXXXXXXXX)
+export TEMPDIR
+
+# Load makepkg.conf variables to be available
+# shellcheck disable=SC2119
+load_makepkg_config
+
+# Use a source-only tarball as an intermediate to transfer files. This
+# guarantees the checksums are okay, and guarantees that all needed files are
+# transferred, including local sources, install scripts, and changelogs.
+export SRCPKGDEST="${TEMPDIR}"
+makepkg_source_package || die "unable to make source package"
+
+# Temporary cosmetic workaround makepkg if SRCDEST is set somewhere else
+# but an empty src dir is created in PWD. Remove once fixed in makepkg.
+rmdir --ignore-fail-on-non-empty src 2>/dev/null || true
+
+# Create a temporary directory on the server
+remote_temp=$(
+    ssh "${SSH_OPTS[@]}" -- "$server" '
+        temp="${XDG_CACHE_HOME:-$HOME/.cache}/aur-remotebuild" &&
+        mkdir -p "$temp" &&
+        mktemp --directory --tmpdir="$temp"
+')
+
+# Transfer the srcpkg to the server
+msg "Transferring source package to the server..."
+_srcpkg=("$SRCPKGDEST"/*"$SRCEXT")
+srcpkg="${_srcpkg[0]}"
+rsync "${RSYNC_OPTS[@]}" -- "$srcpkg" "$server":"$remote_temp" || die
+
+# Prepare the srcpkg on the server
+msg "Extracting srcpkg"
+ssh "${SSH_OPTS[@]}" -- "$server" "cd ${remote_temp@Q} && bsdtar --strip-components 1 -xvf $(basename "$srcpkg")" || die
+
+# Run the build command on the server
+msg "Running aur chroot ${chroot_args[*]}"
+# shellcheck disable=SC2145
+if ssh "${SSH_OPTS[@]}" -t -- "$server" "cd ${remote_temp@Q} && ${aur_chroot_cmd[@]@Q}"; then
+    msg "Build complete"
+
+    # Get an array of files that should be downloaded from the server
+    mapfile -t files < <(
+        ssh "${SSH_OPTS[@]}" -- "$server" "
+            cd ${remote_temp@Q}"' &&
+            while read -r file; do
+                [[ -f "${file}" ]] && printf "%s\n" "${file}" ||:
+            done < <(SRCDEST="" PKGDEST="" LOGDEST="" makepkg --packagelist) &&
+            printf "%s\n" '"${remote_temp@Q}/PKGBUILD"'
+
+            find '"${remote_temp@Q}"' -name "*.log"
+    ')
+else
+    # Build failed, only the logs should be downloaded from the server
+    mapfile -t files < <(
+        ssh "${SSH_OPTS[@]}" -- "$server" '
+            find '"${remote_temp@Q}"' -name "*.log"
+    ')
+fi
+
+
+if (( ${#files[@]} )); then
+    msg 'Downloading files...'
+    rsync "${RSYNC_OPTS[@]}" -- "${files[@]/#/$server:}" "${TEMPDIR}/" || die
+
+    if is_globfile "${TEMPDIR}"/*.log; then
+        # shellcheck disable=SC2031
+        mv "${TEMPDIR}"/*.log "${LOGDEST:-${PWD}}/"
+    fi
+    if is_globfile "${TEMPDIR}"/*.pkg.tar*; then
+        # Building a package may change the PKGBUILD during update_pkgver
+        # shellcheck disable=SC2031
+        mv "${TEMPDIR}/PKGBUILD" "${PWD}/"
+        # shellcheck disable=SC2031
+        mv "${TEMPDIR}"/*.pkg.tar* "${PKGDEST:-${PWD}}/"
+    else
+        # shellcheck disable=SC2031
+        error "Build failed, check logs in ${LOGDEST:-${PWD}}"
+        exit 1
+    fi
+
+    # auto generate .SRCINFO
+    # shellcheck disable=SC2119
+    write_srcinfo_file
+
+    msg "Removing remote temporary directory $remote_temp"
+    ssh "${SSH_OPTS[@]}" -- "$server" "rm -rf -- ${remote_temp@Q}"
+else
+    exit 1
+fi

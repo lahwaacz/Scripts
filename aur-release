@@ -1,0 +1,336 @@
+#!/bin/bash
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+# aur-remotebuild - build packages remotely using aur-chroot
+# (based on commitpkg from devtools)
+set -o errexit
+shopt -s nullglob
+readonly argv0=release
+
+source /usr/share/devtools/lib/common.sh
+source /usr/share/devtools/lib/util/srcinfo.sh
+
+source /usr/share/makepkg/util/parseopts.sh
+source /usr/share/makepkg/util/util.sh
+
+set -eo pipefail
+
+if [[ ! -f PKGBUILD ]]; then
+    echo "No PKGBUILD in the current directory!" >&2
+    exit 1
+fi
+
+# Check if releasing from a branch
+if ! branchname=$(git symbolic-ref --short HEAD); then
+    die 'not on any branch'
+fi
+if [[ "$branchname" != master ]]; then
+    die 'must be run from the master branch'
+fi
+
+# default arguments
+server=pkgbuild.com
+remote_path=public_html/repo
+rsyncopts=("${RSYNC_OPTS[@]}" --perms --chmod='u=rw,go=r')
+release_commit=1
+release_push=0
+release_upload=0
+
+usage() {
+    echo >&2 "Usage: $argv0 [OPTIONS]"
+    echo >&2 ""
+    echo >&2 "Run this script in a PKGBUILD dir to release an already built package."
+    echo >&2 ""
+    echo >&2 "The script comprises the following operations:"
+    echo >&2 ""
+    echo >&2 "- (default) modified version-controlled files are staged for commit"
+    echo >&2 "- (default) all build artifacts are signed with gpg"
+    echo >&2 "- (optional) commits are pushed to the remote git repository"
+    echo >&2 "- (optional) build artifacts are uploaded to the binary repository"
+    echo >&2 ""
+    echo >&2 "OPTIONS"
+    echo >&2 "    --no-commit   Do not stage version-controlled files for commit"
+    echo >&2 "    --push        Automatically push commits to the remote git repository"
+    echo >&2 "    --upload      Automatically upload all build artifacts to the binary"
+    echo >&2 "                  repository hosted at $server:$remote_path"
+    exit 1
+}
+
+## option parsing
+opt_short=''
+opt_long=('no-commit' 'push' 'upload')
+opt_hidden=()
+
+if ! parseopts "$opt_short" "${opt_long[@]}" "${opt_hidden[@]}" -- "$@"; then
+    usage
+fi
+set -- "${OPTRET[@]}"
+
+while true; do
+    case "$1" in
+        --no-commit)
+            release_commit=0
+            ;;
+        --push)
+            release_push=1
+            ;;
+        --upload)
+            release_upload=1
+            ;;
+        --)
+            shift;
+            break
+            ;;
+    esac
+    shift
+done
+
+
+check_pkgbuild_validity() {
+    # shellcheck source=/usr/share/pacman/PKGBUILD.proto
+    . ./PKGBUILD
+
+    # skip when there are no sources available
+    if (( ! ${#source[@]} )); then
+        return
+    fi
+
+    # validate sources hash algo is at least > sha1
+    local bad_algos=("cksums" "md5sums" "sha1sums")
+    local good_hash_algo=false
+
+    # from makepkg libmakepkg/util/schema.sh
+    for integ in "${known_hash_algos[@]}"; do
+        local sumname="${integ}sums"
+        if [[ -n ${!sumname} ]] && ! in_array "${sumname}" "${bad_algos[@]}"; then
+            good_hash_algo=true
+            break
+        fi
+    done
+
+    if ! $good_hash_algo; then
+        die "PKGBUILD lacks a secure cryptographic checksum, insecure algorithms: ${bad_algos[*]}"
+    fi
+}
+
+# Source makepkg.conf; fail if it is not found
+if [[ -r '/etc/makepkg.conf' ]]; then
+    source '/etc/makepkg.conf'
+else
+    die '/etc/makepkg.conf not found!'
+fi
+
+# Source user-specific makepkg.conf overrides
+if [[ -r "${XDG_CONFIG_HOME:-$HOME/.config}/pacman/makepkg.conf" ]]; then
+    # shellcheck source=/dev/null
+    source "${XDG_CONFIG_HOME:-$HOME/.config}/pacman/makepkg.conf"
+elif [[ -r "$HOME/.makepkg.conf" ]]; then
+    # shellcheck source=/dev/null
+    source "$HOME/.makepkg.conf"
+fi
+
+source=()
+# shellcheck source=/usr/share/pacman/PKGBUILD.proto
+. ./PKGBUILD
+pkgbase=${pkgbase:-$pkgname}
+
+if (( ${#validpgpkeys[@]} != 0 )); then
+    if [[ -d keys ]]; then
+        for key in "${validpgpkeys[@]}"; do
+            if [[ ! -f keys/pgp/$key.asc ]]; then
+                export-pkgbuild-keys || die 'Failed to export valid PGP keys for source files'
+            fi
+        done
+    else
+        export-pkgbuild-keys || die 'Failed to export valid PGP keys for source files'
+    fi
+
+    git add --force -- keys/pgp/*
+fi
+
+# find files which should be under source control
+needsversioning=(PKGBUILD)
+for s in "${source[@]}"; do
+    [[ $s != *://* ]] && needsversioning+=("$s")
+done
+for i in 'changelog' 'install'; do
+    while read -r file; do
+        # evaluate any bash variables used
+        # shellcheck disable=SC2001
+        eval "file=\"$(sed "s/^\(['\"]\)\(.*\)\1\$/\2/" <<< "$file")\""
+        needsversioning+=("$file")
+    done < <(sed -n "s/^[[:space:]]*$i=//p" PKGBUILD)
+done
+for key in "${validpgpkeys[@]}"; do
+    needsversioning+=("keys/pgp/$key.asc")
+done
+
+# assert that they really are controlled by git
+if (( ${#needsversioning[*]} )); then
+    for file in "${needsversioning[@]}"; do
+        # skip none existing files
+        if [[ ! -f "${file}" ]]; then
+            continue
+        fi
+        if ! git ls-files --error-unmatch "$file"; then
+            die "%s is not under version control" "$file"
+        fi
+    done
+fi
+
+
+# check packages for validity
+for _arch in "${arch[@]}"; do
+    for _pkgname in "${pkgname[@]}"; do
+        fullver=$(get_full_version "$_pkgname")
+
+        if pkgfile=$(find_cached_package "$_pkgname" "$fullver" "$_arch"); then
+            check_package_validity "$pkgfile"
+        fi
+    done
+
+    fullver=$(get_full_version "$pkgbase")
+    if pkgfile=$(find_cached_package "$pkgbase-debug" "$fullver" "$_arch"); then
+        check_package_validity "$pkgfile"
+    fi
+done
+
+# NOTE: not a reality on the AUR...
+# check for PKGBUILD standards
+#check_pkgbuild_validity
+
+# auto generate .SRCINFO
+# shellcheck disable=SC2119
+write_srcinfo_file
+
+
+if (( release_commit )); then
+    git add --force .SRCINFO
+
+    if [[ -n $(git status --porcelain --untracked-files=no) ]]; then
+        stat_busy 'Staging files'
+        for f in $(git ls-files --modified); do
+            git add "$f"
+        done
+        for f in $(git ls-files --deleted); do
+            git rm "$f"
+        done
+        stat_done
+
+        msgtemplate="upgpkg: $(get_full_version)"
+        if [[ -n $1 ]]; then
+            stat_busy 'Committing changes'
+            git commit -q -m "${msgtemplate}: ${1}" || die
+            stat_done
+        else
+            [[ -z ${WORKDIR:-} ]] && setup_workdir
+            msgfile=$(mktemp --tmpdir="${WORKDIR}" commitpkg.XXXXXXXXXX)
+            echo "$msgtemplate" > "$msgfile"
+            if [[ -n $GIT_EDITOR ]]; then
+                $GIT_EDITOR "$msgfile" || die
+            elif giteditor=$(git config --get core.editor); then
+                $giteditor "$msgfile" || die
+            elif [[ -n $VISUAL ]]; then
+                $VISUAL "$msgfile" || die
+            elif [[ -n $EDITOR ]]; then
+                $EDITOR "$msgfile" || die
+            else
+                die "No usable editor found (tried \$GIT_EDITOR, git config [core.editor], \$VISUAL, \$EDITOR)."
+            fi
+            [[ -s $msgfile ]] || die
+            stat_busy 'Committing changes'
+            git commit -v -q -F "$msgfile" || die
+            unlink "$msgfile"
+            stat_done
+        fi
+    fi
+
+    if (( release_push )); then
+        git_remote_branch=$(git rev-parse --abbrev-ref --symbolic-full-name "@{u}")
+        git_remote=${git_remote_branch%/*}
+        git_remote_url=$(git remote get-url "$git_remote")
+
+        msg 'Fetching remote changes'
+        git fetch --prune --prune-tags origin || die 'failed to fetch remote changes'
+
+        # Check if local branch is up to date and contains the latest origin commit
+        if remoteref=$(git rev-parse "$git_remote_branch" 2>/dev/null); then
+            if [[ $(git branch "$branchname" --contains "$remoteref" --format '%(refname:short)') != "$branchname" ]]; then
+                die "local branch is out of date, run 'git pull --rebase'"
+            fi
+        fi
+
+        msg "Pushing commits to $git_remote_branch where $git_remote is $git_remote_url"
+        git push --tags --set-upstream "$git_remote" "$branchname" || abort
+    else
+        warning "Not pushing commits because --push was not given."
+    fi
+elif (( release_push )); then
+    warning "Not pushing commits because --no-commit was given."
+fi
+
+
+declare -a uploads
+
+for _arch in "${arch[@]}"; do
+    for _pkgname in "${pkgname[@]}"; do
+        fullver=$(get_full_version "$_pkgname")
+        if ! pkgfile=$(find_cached_package "$_pkgname" "$fullver" "${_arch}"); then
+            warning "Skipping %s: failed to locate package file" "$_pkgname-$fullver-$_arch"
+            continue 2
+        fi
+        uploads+=("$pkgfile")
+    done
+
+    fullver=$(get_full_version "$pkgbase")
+    if ! pkgfile=$(find_cached_package "$pkgbase-debug" "$fullver" "$_arch"); then
+        continue
+    fi
+    if ! is_debug_package "$pkgfile"; then
+        continue
+    fi
+    uploads+=("$pkgfile")
+done
+
+for pkgfile in "${uploads[@]}"; do
+    sigfile="${pkgfile}.sig"
+    if [[ ! -f $sigfile ]]; then
+        msg "Signing package %s..." "${pkgfile}"
+        if [[ -n $GPGKEY ]]; then
+            SIGNWITHKEY=(-u "${GPGKEY}")
+        fi
+        gpg --detach-sign --use-agent --no-armor "${SIGNWITHKEY[@]}" "${pkgfile}" || die
+    fi
+    if ! gpg --verify "$sigfile" "$pkgfile" >/dev/null 2>&1; then
+        die "Signature %s is incorrect!" "$sigfile"
+    fi
+    uploads+=("$sigfile")
+done
+
+
+if (( release_upload )) && [[ ${#uploads[*]} -gt 0 ]]; then
+    new_uploads=()
+
+    # convert to absolute paths so rsync can work with colons (epoch)
+    while read -r -d '' upload; do
+        new_uploads+=("$upload")
+    done < <(realpath -z "${uploads[@]}")
+
+    uploads=("${new_uploads[@]}")
+    unset new_uploads
+
+    msg 'Uploading all package and signature files'
+    rsync "${rsyncopts[@]}" "${uploads[@]}" "$server:$remote_path/" || die
+
+    # convert to remote paths
+    declare -a remote_pkgfiles
+    for pkgfile in "${uploads[@]}"; do
+        if ! [[ "$pkgfile" = *.sig ]]; then
+            remote_pkgfiles+=("$remote_path"/"$(basename "$pkgfile")")
+        fi
+    done
+
+    msg 'Updating remote pacman database'
+    ssh -t "${SSH_OPTS[@]}" -- "$server" "./repo add ${remote_pkgfiles[*]@Q} && ./repo update"
+fi

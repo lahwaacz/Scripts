@@ -1,0 +1,110 @@
+#! /usr/bin/env python3
+
+"""
+Check the repo for problems and new package versions
+"""
+
+import subprocess
+from pathlib import Path
+
+import tomlkit.toml_file
+
+SOURCE_DIRS = [
+    {
+        "path": Path("~/Arch/packaging/aur/").expanduser(),
+        "nvchecker_source": "aur",
+    },
+]
+NVCHECKER_CONFIG_FILE = Path("~/Arch/packaging/aur/nvchecker.toml").expanduser()
+
+
+def get_from_SRCINFO(path, key):
+    with open(path, "r") as f:
+        for line in f.readlines():
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            k, v = line.split("=", 1)
+            if k.strip() == key:
+                return v.strip()
+
+
+def get_from_PKGBUILD(path, key):
+    with open(path, "r") as f:
+        for line in f.readlines():
+            if line.startswith(f"{key}="):
+                value = line.split("=", 1)[1].strip()
+                if value.startswith("'") and value.endswith("'"):
+                    value = value[1:-1]
+                if value.startswith('"') and value.endswith('"'):
+                    value = value[1:-1]
+                return value
+
+
+def nvchecker():
+    """Updates ``nvchecker`` config file with the sources defined in ``SOURCE_DIRS``
+    and then runs ``nvchecker``.
+    """
+    for src in SOURCE_DIRS:
+        root_path = src["path"]
+
+        # read the config file
+        config_file = tomlkit.toml_file.TOMLFile(NVCHECKER_CONFIG_FILE)
+        config = config_file.read()
+
+        # iterate over package directories in the source root
+        for pkg in root_path.iterdir():
+            if not pkg.is_dir():
+                continue
+            elif not (pkg / "PKGBUILD").is_file():
+                print(f"WARNING: PKGBUILD not found in {pkg}")
+                continue
+
+            # extract from .SRCINFO if it exists
+            if (pkg / ".SRCINFO").is_file():
+                pkgname = get_from_SRCINFO(pkg / ".SRCINFO", "pkgname")
+                # pkgver = get_from_SRCINFO(pkg / ".SRCINFO", "pkgver")
+            else:
+                # extract pkgname and pkgver from PKGBUILD in the most hackish way
+                pkgname = pkg.name
+                # pkgname = get_from_PKGBUILD(pkg / "PKGBUILD", "pkgname")
+                # pkgver = get_from_PKGBUILD(pkg / "PKGBUILD", "pkgver")
+
+            # ensure that a TOML table for the pkgname exists
+            if pkgname not in config:
+                config.add(pkgname, tomlkit.table())
+                update_config = True
+            else:
+                update_config = src.get("nvchecker_overwrite", True)
+
+            # update the config file
+            if update_config:
+                source = src["nvchecker_source"]
+                config[pkgname]["source"] = source
+                if source in {"aur", "archpkg"}:
+                    config[pkgname][source] = pkgname
+                elif source == "gitlab":
+                    config[pkgname]["host"] = src["nvchecker_host"]
+                    config[pkgname]["gitlab"] = src["nvchecker_gitlab_format"].format(
+                        remote_pkgname=pkgname
+                    )
+
+        # write the config file
+        config_file.write(config)
+
+    # run nvchecker
+    subprocess.run(["nvchecker", "-c", NVCHECKER_CONFIG_FILE], check=True)
+
+
+def check():
+    nvchecker()
+
+    # TODO: check if rebuild-detector is installed
+    print("Checking packages that need to be rebuilt...")
+    subprocess.run(["checkrebuild", "-i", "lahwaacz"], check=True)
+
+    # TODO: list packages that are in the database, but package file is deleted or source is missing
+
+
+if __name__ == "__main__":
+    check()
