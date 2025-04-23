@@ -82,7 +82,8 @@ aur_chroot_cmd=(
     env
     # aur-chroot does not preserve SRCDEST and LOGDEST by default https://github.com/aurutils/aurutils/issues/1196
     AUR_PACMAN_AUTH="sudo --preserve-env=GNUPGHOME,SSH_AUTH_SOCK,SRCDEST,PKGDEST,LOGDEST"
-    SRCDEST=""
+    # NOTE: do not clear SRCDEST to use cached directory set in the user's makepkg.conf on the remote host
+    #SRCDEST=""
     PKGDEST=""
     LOGDEST=""
     aur
