@@ -1,11 +1,10 @@
-#! /usr/bin/env python3
+#!/usr/bin/env python3
 
 import os
 import shutil
 from pathlib import Path
 
 import yaml
-
 
 DEFAULT_CONFIG = """
 - ~/.adobe              # Flash crap
@@ -61,6 +60,18 @@ DEFAULT_CONFIG = """
 - ~/.local/share/Trash/    # VSCode puts deleted files here
 """
 
+def get_size(path):
+    """Returns the size of a file or directory in bytes."""
+    if os.path.isfile(path):
+        return os.path.getsize(path)
+    elif os.path.isdir(path):
+        total_size = 0
+        for dirpath, dirnames, filenames in os.walk(path):
+            for f in filenames:
+                fp = os.path.join(dirpath, f)
+                total_size += os.path.getsize(fp)
+        return total_size
+    return 0
 
 def read_config():
     """
@@ -76,7 +87,6 @@ def read_config():
 
     with open(config_path, "r") as f:
         return yaml.safe_load(f)
-
 
 def yesno(question, default="n"):
     """
@@ -94,7 +104,6 @@ def yesno(question, default="n"):
         return True
     return False
 
-
 def rmshit():
     shittyfiles = read_config()
 
@@ -104,7 +113,8 @@ def rmshit():
         absf = os.path.expanduser(f)
         if os.path.exists(absf):
             found.append(absf)
-            print("    %s" % f)
+            size = get_size(absf)
+            print("    %s (%d bytes)" % (f, size))
 
     if len(found) == 0:
         print("No shitty files found :)")
@@ -116,10 +126,8 @@ def rmshit():
                 os.remove(f)
             else:
                 shutil.rmtree(f)
-        print("All cleaned")
     else:
         print("No file removed")
-
 
 if __name__ == "__main__":
     rmshit()
