@@ -126,6 +126,7 @@ def rmshit():
                 os.remove(f)
             else:
                 shutil.rmtree(f)
+        print("All cleaned")
     else:
         print("No file removed")
 
