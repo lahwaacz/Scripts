@@ -96,17 +96,31 @@ def yesno(question, default="n"):
         return True
     return False
 
+def format_size(size_in_bytes):
+    """Format file size in bytes to a human-readable string."""
+    if size_in_bytes <= 0:
+        return "0 bytes"
+
+    units = ['bytes', 'KB', 'MB', 'GB']
+    size = float(size_in_bytes)
+    unit_index = min(int((size_in_bytes.bit_length() - 1) // 10) , len(units) - 1)
+    size /= (1024 ** unit_index)
+
+    return f"{size:.2f} {units[unit_index]}"
+    
 def rmshit():
     shittyfiles = read_config()
 
     print("Found shittyfiles:")
     found = []
+    total_size = 0
     for f in shittyfiles:
         absf = os.path.expanduser(f)
         if os.path.exists(absf):
             found.append(absf)
             size = get_size(absf)
-            print(f"    {f} ({size} bytes)")
+            total_size += size
+            print(f"    {f} ({format_size(size)})")
 
     if len(found) == 0:
         print("No shitty files found :)")
@@ -118,7 +132,7 @@ def rmshit():
                 os.remove(f)
             else:
                 shutil.rmtree(f)
-        print("All cleaned")
+        print(f"All cleaned, {format_size(total_size)} freed.")
     else:
         print("No file removed")
 
