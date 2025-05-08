@@ -60,10 +60,12 @@ DEFAULT_CONFIG = """
 - ~/.local/share/Trash/    # VSCode puts deleted files here
 """
 
+
 def get_size(path):
     if Path(path).is_dir():
         return sum(p.stat().st_size for p in Path(path).rglob("*"))
     return Path(path).stat().st_size
+
 
 def read_config():
     """
@@ -79,6 +81,7 @@ def read_config():
 
     with open(config_path, "r") as f:
         return yaml.safe_load(f)
+
 
 def yesno(question, default="n"):
     """
@@ -96,18 +99,20 @@ def yesno(question, default="n"):
         return True
     return False
 
+
 def format_size(size_in_bytes):
     """Format file size in bytes to a human-readable string."""
     if size_in_bytes <= 0:
         return "0 bytes"
 
-    units = ['bytes', 'KiB', 'MiB', 'GiB']
+    units = ["bytes", "KiB", "MiB", "GiB"]
     size = float(size_in_bytes)
-    unit_index = min(int((size_in_bytes.bit_length() - 1) // 10) , len(units) - 1)
-    size /= (1024 ** unit_index)
+    unit_index = min(int((size_in_bytes.bit_length() - 1) // 10), len(units) - 1)
+    size /= 1024**unit_index
 
     return f"{size:.4g} {units[unit_index]}"
-    
+
+
 def rmshit():
     shittyfiles = read_config()
 
@@ -135,6 +140,7 @@ def rmshit():
         print(f"All cleaned, {format_size(total_size)} freed.")
     else:
         print("No file removed")
+
 
 if __name__ == "__main__":
     rmshit()
