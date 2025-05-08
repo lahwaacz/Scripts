@@ -83,7 +83,7 @@ def yesno(question, default="n"):
     Asks the user for YES or NO, always case insensitive.
     Returns True for YES and False for NO.
     """
-    prompt = f"{question} (y/[n])"
+    prompt = f"{question} (y/[n]) "
 
     ans = input(prompt).strip().lower()
 
