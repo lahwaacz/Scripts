@@ -106,7 +106,7 @@ def format_size(size_in_bytes):
     unit_index = min(int((size_in_bytes.bit_length() - 1) // 10) , len(units) - 1)
     size /= (1024 ** unit_index)
 
-    return f"{size:.2f} {units[unit_index]}"
+    return f"{size:.4g} {units[unit_index]}"
     
 def rmshit():
     shittyfiles = read_config()
