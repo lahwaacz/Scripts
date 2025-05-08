@@ -101,7 +101,7 @@ def format_size(size_in_bytes):
     if size_in_bytes <= 0:
         return "0 bytes"
 
-    units = ['bytes', 'KB', 'MB', 'GB']
+    units = ['bytes', 'KiB', 'MiB', 'GiB']
     size = float(size_in_bytes)
     unit_index = min(int((size_in_bytes.bit_length() - 1) // 10) , len(units) - 1)
     size /= (1024 ** unit_index)
