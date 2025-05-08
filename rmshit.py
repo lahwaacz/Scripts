@@ -60,18 +60,8 @@ DEFAULT_CONFIG = """
 - ~/.local/share/Trash/    # VSCode puts deleted files here
 """
 
-def get_size(path):
-    """Returns the size of a file or directory in bytes."""
-    if os.path.isfile(path):
-        return os.path.getsize(path)
-    elif os.path.isdir(path):
-        total_size = 0
-        for dirpath, dirnames, filenames in os.walk(path):
-            for f in filenames:
-                fp = os.path.join(dirpath, f)
-                total_size += os.path.getsize(fp)
-        return total_size
-    return 0
+def get_size(folder):
+    return sum(p.stat().st_size for p in Path(folder).rglob('*'))
 
 def read_config():
     """
@@ -93,7 +83,7 @@ def yesno(question, default="n"):
     Asks the user for YES or NO, always case insensitive.
     Returns True for YES and False for NO.
     """
-    prompt = "%s (y/[n]) " % question
+    prompt = f"{question} (y/[n])"
 
     ans = input(prompt).strip().lower()
 
