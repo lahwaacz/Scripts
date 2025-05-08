@@ -114,7 +114,7 @@ def rmshit():
         if os.path.exists(absf):
             found.append(absf)
             size = get_size(absf)
-            print("    %s (%d bytes)" % (f, size))
+            print(f"    {f} ({size} bytes)")
 
     if len(found) == 0:
         print("No shitty files found :)")
