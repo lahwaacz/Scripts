@@ -60,8 +60,10 @@ DEFAULT_CONFIG = """
 - ~/.local/share/Trash/    # VSCode puts deleted files here
 """
 
-def get_size(folder):
-    return sum(p.stat().st_size for p in Path(folder).rglob('*'))
+def get_size(path):
+    if Path(path).is_dir():
+        return sum(p.stat().st_size for p in Path(path).rglob("*"))
+    return Path(path).stat().st_size
 
 def read_config():
     """
