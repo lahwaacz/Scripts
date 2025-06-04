@@ -39,12 +39,12 @@ function fetchmail()
 
 # check online
 check_domain=ping.archlinux.org
-if ! ping -c 1 "$check_domain" > /dev/null; then
+if ! ping -c 1 -w 1 "$check_domain" > /dev/null; then
     echo "$check_domain is not reachable, check your network status."
     exit 1
 fi
 check_host=10.13.0.1
-if ! ping -c 1 "$check_host" > /dev/null; then
+if ! ping -c 1 -w 1 "$check_host" > /dev/null; then
     echo "$check_host is not reachable, check the host status or WireGuard network."
     exit 1
 fi
