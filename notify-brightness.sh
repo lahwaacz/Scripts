@@ -18,4 +18,4 @@ fchars='◼◼◼◼◼◼◼◼◼◼'
 echars='◻◻◻◻◻◻◻◻◻◻'
 bar="${fchars:0:f}${echars:0:e} $percent%"
 
-notify-send --app-name=VolumeNotification --expire-time="$duration" --urgency=low "$title" "$bar"
+notify-send --app-name=VolumeNotification --expire-time="$duration" --urgency=low --transient "$title" "$bar"
