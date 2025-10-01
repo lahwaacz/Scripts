@@ -256,57 +256,70 @@ class IMAPNotifier:
             logger.error(f"Failed to connect to {protocol}://{hostname}: {e}")
             return None
 
-    async def get_new_emails(self, connection, account_id, mailbox):
+    async def get_new_emails(self, connection, account_id, mailboxes_to_process):
         """Get new emails since last check"""
-        logger.debug(f"Checking {account_id}/{mailbox} for new emails")
+        logger.debug(f"Checking {account_id} for new emails")
 
-        try:
-            # Get previous unseen emails from the state
-            mailbox_state = self.state.setdefault(account_id, {}).setdefault(
-                mailbox, {}
-            )
-            previous_unseen_ids = set(mailbox_state.get("unseen_ids", []))
+        # Get previous unseen emails from the state
+        account_state = self.state.setdefault(account_id, {})
+        previous_unseen_message_ids = set(account_state.get("unseen_message_ids", []))
 
-            # Select mailbox
-            connection.select(mailbox)
+        unseen_message_ids = set()
+        new_emails = []
 
-            # Search for unseen emails
-            status, messages = connection.search(None, "UNSEEN")
+        # Process each mailbox
+        for mailbox in mailboxes_to_process:
+            try:
+                # Remove old state data
+                # TODO: remove this after some time
+                if mailbox in account_state:
+                    del account_state[mailbox]
 
-            if status != "OK":
-                logger.error("Failed to search emails")
-                return []
+                # Select mailbox
+                connection.select(mailbox)
 
-            email_ids = messages[0].split()
+                # Search for unseen emails
+                status, messages = connection.search(None, "UNSEEN")
 
-            # Process new emails
-            new_emails = []
-            for email_id in email_ids:
-                # Skip if already processed
-                if email_id.decode() in previous_unseen_ids:
+                if status != "OK":
+                    logger.error(
+                        f"Failed to search emails in mailbox {mailbox} for account {account_id}"
+                    )
                     continue
 
-                try:
-                    # Fetch the email headers only
-                    status, msg_data = connection.fetch(email_id, "(RFC822.HEADER)")
+                email_ids = messages[0].split()
 
-                    if status == "OK":
-                        msg = email.parser.Parser().parsestr(
-                            msg_data[0][1].decode("utf-8", errors="ignore")
-                        )
-                        new_emails.append(msg)
-                except Exception as e:
-                    logger.error(f"Failed to fetch email {email_id}: {e}")
-                    continue
+                # Process new emails
+                for email_id in email_ids:
+                    try:
+                        # Fetch the email headers only
+                        status, msg_data = connection.fetch(email_id, "(RFC822.HEADER)")
 
-            # Update IDs of unseen emails in the state
-            mailbox_state["unseen_ids"] = [id.decode() for id in email_ids]
+                        if status == "OK":
+                            msg = email.parser.Parser().parsestr(
+                                msg_data[0][1].decode("utf-8", errors="ignore")
+                            )
+                            # Always get a Message-ID, which uniquely identifies the message.
+                            # The `email_id` obtained from IMAP is just numeric identifier in the *mailbox*,
+                            # not in the whole account.
+                            message_id = msg.get("Message-ID")
+                            unseen_message_ids.add(message_id)
+                            if message_id not in previous_unseen_message_ids:
+                                new_emails.append(msg)
 
-            return new_emails
+                    except Exception as e:
+                        logger.error(f"Failed to fetch email {email_id}: {e}")
+                        continue
 
-        except Exception as e:
-            logger.error(f"Error getting new emails: {e}")
-            return []
+            except Exception as e:
+                logger.error(
+                    f"Error processing mailbox {mailbox} for account {account_id}: {e}"
+                )
+
+        # Update IDs of unseen emails in the state
+        account_state["unseen_message_ids"] = sorted(unseen_message_ids)
+
+        return new_emails
 
     async def process_mailboxes(self, account_config, account_id, connection):
         """Process mailboxes for an account"""
@@ -348,21 +361,12 @@ class IMAPNotifier:
             # Fallback to INBOX
             mailboxes_to_process = ["INBOX"]
 
-        # Process each mailbox
-        for mailbox in mailboxes_to_process:
-            try:
-                # Get new emails
-                emails = await self.get_new_emails(connection, account_id, mailbox)
+        # Get new emails
+        emails = await self.get_new_emails(connection, account_id, mailboxes_to_process)
 
-                # Send notifications for new emails
-                for email in emails:
-                    self.send_notification(email)
-
-            except Exception as e:
-                logger.error(
-                    f"Error processing mailbox {mailbox} for account {account_id}: {e}"
-                )
-                continue
+        # Send notifications for new emails
+        for message in emails:
+            self.send_notification(message)
 
     async def process_account(self, account_config):
         """Process a single account"""
