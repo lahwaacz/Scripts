@@ -45,7 +45,7 @@ function extract() {
             zstd -dkv "$fname"
             ;;
         zip)
-            unzip "$fname" -d "$basename"
+            unzip -O utf8 "$fname" -d "$basename"
             ;;
         rar)
             mkdir "$basename"
